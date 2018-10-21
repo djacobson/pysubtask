@@ -12,7 +12,7 @@ def get_commands(master):
 
 	while not finished:
 		try:
-			kbd_input = input("Enter cmd (x | r | 0-n):\n").strip().lower()
+			kbd_input = input("Enter cmd (x | r | a | c | 0-n):\n").strip().lower()
 		except KeyboardInterrupt:
 			# CTRL+C exit
 			kbd_input = 'x'
@@ -27,11 +27,11 @@ def get_commands(master):
 				break
 
 			elif kbd_input == 'r':
-				# Reset sub-process
+				# Reset subtask
 				master.reset()
 
 			elif kbd_input == 'a':
-				# Notify sub-process of all files
+				# Notify subtask of all files
 				master.notify_all()
 
 			elif kbd_input == 'c':
@@ -39,7 +39,7 @@ def get_commands(master):
 				master.check_pending_notifications()
 
 			elif kbd_input.isdigit():
-				# Notify sub-process of specific file in list (by index num)
+				# Notify subtask of specific file in list (by index num)
 				master.notify_by_index(int(kbd_input))
 
 			else:

@@ -21,7 +21,19 @@ Run the demo:
 > python3 demo.py
 ```
 
-...and observe the log output in the ``logs`` folder, as well as the test data files.
+...and enter one or more of the following interactive commands to test the module:
+
+```
+Enter cmd:
+
+'x' = Exit demo.py
+'a' = Notify subtask of all files ready with new data
+0-n = Notify subtask of a specific file in list (by index num) ready with new data
+'c' = Check for pending data (from ending on a Burst) and notify it if it exists
+'r' = Reset the subtask (complete shutdown and restart of the subtask process)
+```
+
+...and also observe the log output in the ``logs`` folder, as well as the test data files.
 
 Experiment with your own data file(s) by editing the following initialization code in ``demo.py``:
 
