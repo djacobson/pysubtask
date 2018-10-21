@@ -9,21 +9,21 @@ Install from [PyPI](https://pypi.python.org/pypi/pysubtask): To do...
 Or install from [GitHub](https://github.com/djacobson/pysubtask):
 
 ```
-$ git clone https://github.com/djacobson/pysubtask.git
+$ git clone https://github.com/djacobson/pysubtask
 $ cd pysubtask
 ```
 
 Edit ``demo_config.py`` to include the login info for your desired S/FTP server account and/or Dropbox access token (if using Dropbox, change the config line to ``dropbox.UseDropbox = True``.
 
-Run the demo...
+Run the demo:
 
 ```
 > python3 demo.py
 ```
 
-and observe the log output in the ``logs`` folder, as well as the test data files.
+...and observe the log output in the ``logs`` folder, as well as the test data files.
 
-Experiment with your own data file(s) by editing the following initialization code in demo.py:
+Experiment with your own data file(s) by editing the following initialization code in ``demo.py``:
 
 ```
 uploadfiles = [
