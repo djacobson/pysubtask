@@ -51,38 +51,38 @@ Part of the inspiration behind this package's design involved constant uploading
 #### Retry logic:
 
 The FTP and Dropbox extension modules implement the following retry procedure to handle authentication and/or connection failures:
-- retry an initial number of tries (default 5), waiting a short time between each failure (default 3 seconds)
-- after the initial number of failures, wait a longer period of time (default 30 seconds) before starting another set of retries
+- Retry an initial number of tries (default 5), waiting a short time between each failure (default 3 seconds)
+- After the initial number of failures, wait a longer period of time (default 30 seconds) before starting another set of retries
 After successful connection, the module will keep the connection 'open' as long as it is receiving new data notifications from the master. But, if a specified amount of time passes where there is no notifications, 'dead time', the module will logout / disconnect (Note: it can be unreliable to keep FTP, Dropbox, etc. Internet service connection open over long periods of time, i.e.: hours). The module will automatically re-authenticate + reconnect if a new data notification is observed. ('dead time' default is set to 3 minutes = 180000 millisecs, configured on class instantiation or in ``pysubtask/defaults_config.py: ftp.DeadTimeMilli and/or dropbox.*``)
 
 #### Burst Mode: (optional and experimental)
 
-The idea behind the 'burst mode' option is... if a large amount of new data in a short period of time is causing the master to generate frequent notifications, to disable notifications for a specified amount of time, allowing data to 'buffer up' in the data file(s), before notifying the subtask to work on it (i.e.: FTP transfer it, etc.), and then returning to 'regular notification mode' when the burst is over or a allowed time period expires (default 5 seconds = 5000 milliseconds, configured in ``pysubtask/defaults_config.py: burst_mode.expire_milli``). This is purely an optional fine-tuning efficiency, helpful if your specific use case allows for it. The data is being 'buffered up' any ways, in regular 'non-burst' mode; this feature encourages a larger amount of data to be transferred with a reduced number of Internet transactions during a 'burst', provided you can wait a little longer for it. The key, configurable, experimental detail of this feature is detecting when a burst is occurring or beginning. This version 1 uses a rudimentary algorithm of measuring time between notify calls; if a certain number of *consecutive* notifies are called below a specified 'trigger' time between them, a 'burst' is recognized as starting (triggered), and the burst ends (the data is notified) when it expires or a notify is called over (slower) than the 'trigger' time (these burst mode defaults are configured in ``pysubtask/defaults_config.py: burst_mode.*``). Important detail: Using this option, if the last new data notification ends in a 'burst', pending data that has not been notified to the subtask (i.e.: has not yet been transferred, etc.) could be left in the data file (i.e.: no new data has come along to flush it out, etc.). It is up to the user to call ``master.check_pending_notifications()`` on a periodic timer in their main (master) app to check for and flush (notify) possible pending data.
+The idea behind the 'burst mode' option is... if a large amount of new data in a short period of time is causing the master to generate frequent notifications, to disable notifications for a specified amount of time, allowing data to 'buffer up' in the data file(s), before notifying the subtask to work on it (i.e.: FTP transfer it, etc.), and then returning to 'regular notification mode' when the burst is over or a allowed time period expires (default 5 seconds = 5000 milliseconds, configured in ``pysubtask/defaults_config.py: burst_mode.expire_milli``). This is purely an optional fine-tuning efficiency, helpful if your specific use case allows for it. The data is being 'buffered up' any ways, in regular 'non-burst' mode; this feature encourages a larger amount of data to be transferred with a reduced number of Internet transactions during a 'burst', provided you can wait a little longer for it. The key, configurable, experimental detail of this feature is detecting when a burst is occurring or beginning. This version 1 uses a rudimentary algorithm of measuring time between notify calls; if a certain number of _**consecutive**_ notifies are called below a specified 'trigger' time between them, a 'burst' is recognized as starting (triggered), and the burst ends (the data is notified) when it expires or a notify is called over (slower) than the 'trigger' time (these burst mode defaults are configured in ``pysubtask/defaults_config.py: burst_mode.*``). Important detail: Using this option, if the last new data notification ends in a 'burst', pending data that has not been notified to the subtask (i.e.: has not yet been transferred, etc.) could be left in the data file (i.e.: no new data has come along to flush it out, etc.). It is up to the user to call ``master.check_pending_notifications()`` on a periodic timer in their main (master) app to check for and flush (notify) possible pending data.
 
 Note: this master side 'burst mode' feature is not quite the same as a subtask side 'exponential back off' feature (see To Do below).
 
 ### To Do
 
-- demo.py could probably be made into an official test module, moved into a tests folder, and made to work with pytest (including a setyp.py install section for tests)
+- ``demo.py`` could probably be made into an official test module, moved into a tests folder, and made to work with pytest (including a setyp.py install section for tests)
 - Possible feature: Implement an 'exponential back-off' algorithm in the subtask-side (child) of the S/FTP and Dropbox extension classes. This would be slightly different from 'Burst mode' (task master / parent side), with the objective being to reduce the total number of transfers / transactions over a long period (i.e.: 12 hours), as opposed to just reducing some transfers during a 'burst' of data notifications. This feature would have the secondary goal of avoiding surpassing host transaction limits (i.e.: Dropbox upload limits per day, etc.).
 - Possible enhancement: The 'burst detection' algorithm could be made more robust if it considered number of bytes being written to the data file(s), possibly replacing or as an alternative to frequency of notifications.
 
 ### Dependencies
 
-- pysftp
-- dropbox
+- ``pysftp``
+- ``dropbox``
 
 ### Tests
 
-- Platform: Python 3.6 on Raspbian, Ubuntu 18.10, Windows 10
+- Platforms tested: **Python 3.6** on **Raspbian**, **Ubuntu 18.10**, **Windows 10**
 
 ### Dev Notes
 
 The following dev topics may or may not result in future changes...
 
-- To CLI or not to CLI: Even though `pysubtask` has a CLI ``demo.py`` test app; and it's master class utilizes Popen, the command line, and ``parse_args()`` to so spawn subtasks (child processes); it alone is not intended to be an actual CLI utility (as its main user interface). It is primarily an API / utility class patttern for integration into other Python applications. So, it currently does not have a typical CLI ``setup.py`` installation, with CLI entry points, synonyms, etc. This could change in a future version though.
-- The multiple main()'s: Unique to the way this pattern spawns a separate Python env for the subtask, a separate ``main()`` is required per subtask module. Attempts to use a 'shared main()' in this specific pattern typically results in a ``ImportError: attempted relative import with no known parent package`` 'Catch 22' import issue after spawning the subtask.
-- Doing away with the Master classes in the extension modules, replacing with functions: With the exception of the ``BaseMaster``, extension Master classes are light, almost simply wrapper classes. Because of this, it is possible that they might be elimanted and replaced with a function. But, there still might be use cases for custom logic to be added to the master, in which case, a master class is useful since the base class (``BaseMaster``) is used to store state data across member function calls.
+- _To CLI or not to CLI_: Even though `pysubtask` has a CLI ``demo.py`` test app; and it's master class utilizes Popen, the command line, and ``parse_args()`` to so spawn subtasks (child processes); it alone is not intended to be an actual CLI utility (as its main user interface). It is primarily an API / utility class patttern for integration into other Python applications. So, it currently does not have a typical CLI ``setup.py`` installation, with CLI entry points, synonyms, etc. This could change in a future version though.
+- _The multiple main()'s_: Unique to the way this pattern spawns a separate Python env for the subtask, a separate ``main()`` is required per subtask module. Attempts to use a 'shared main()' in this specific pattern typically results in a ``ImportError: attempted relative import with no known parent package`` 'Catch 22' import issue after spawning the subtask.
+- _Doing away with the Master classes in the extension modules, replacing with functions_: With the exception of the ``BaseMaster``, extension Master classes are light, almost simply wrapper classes. Because of this, it is possible that they might be elimanted and replaced with a function. But, there still might be use cases for custom logic to be added to the master, in which case, a master class is useful since the base class (``BaseMaster``) is used to store state data across member function calls.
 
 ### Authors, Contributors, etc.
 
