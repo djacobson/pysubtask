@@ -4,9 +4,9 @@
 
 ## Quick Start
 
-Install from PyPI_:: To do...
+Install from [PyPI](https://pypi.python.org/pypi/pysubtask): To do...
 
-Or install from GitHub_::
+Or install from [GitHub](https://github.com/djacobson/pysubtask):
 
 ```
 $ git clone https://github.com/djacobson/pysubtask.git
@@ -31,9 +31,6 @@ uploadfiles = [
 	{'file': 'logs/test1.mrk', 'burstmode': False}
 ]
 ```
-
-.. _PyPI: https://pypi.python.org/pypi/pysubtask
-.. _GitHub: https://github.com/djacobson/pysubtask
 
 ## About
 
@@ -89,7 +86,4 @@ The following dev topics may or may not result in future changes...
 
 ### Authors, Contributors, etc.
 
-Version 1 of `pysubtask` was designed and written by `David Jacobson`_, with many thanks to `Darryl Agostinelli`_ for extensive refactoring and general Python assistance.
-
-.. _David Jacobson: http://blog.jacobsonhome.com/
-.. _Darryl Agostinelli: http://www.darrylagostinelli.com/
+Version 1 of `pysubtask` was designed and written by [David Jacobson](http://blog.jacobsonhome.com/), with many thanks to [Darryl Agostinelli](http://www.darrylagostinelli.com/) for extensive refactoring and general Python assistance.
