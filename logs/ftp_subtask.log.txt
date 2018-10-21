@@ -1,0 +1,50 @@
+2018-10-15 22:58:36,293 FTPSubtask: INFO: ***** HELLO!: [S/FTP Uploader] *****
+2018-10-15 22:58:36,299 FTPSubtask: INFO: Host port open Success! [DavidJ-PC:22]
+2018-10-15 22:58:36,300 FTPSubtask: INFO: SFTP CONNECT! to [DAVIDJ-PC\David@DavidJ-PC:22/Desktop/winftp/tagreader]
+2018-10-15 22:58:36,694 FTPSubtask: INFO: SFTP: Success! Connected to [DavidJ-PC]
+2018-10-15 22:58:36,855 FTPSubtask: INFO: Uploading ALL files in [logs\bak/ftp]...
+2018-10-15 22:58:36,863 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.csv]
+2018-10-15 22:58:36,870 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.mrk]
+2018-10-15 22:58:36,878 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:58:36,886 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.mrk]
+2018-10-15 22:58:36,886 BaseSubtask: INFO: START! Polling every [2] secs
+2018-10-15 22:58:40,905 BaseSubtask: INFO: Copying [logs/test1.csv] to [logs\bak/ftp]
+2018-10-15 22:58:40,929 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:58:44,950 BaseSubtask: INFO: Copying [logs/test1.csv] to [logs\bak/ftp]
+2018-10-15 22:58:44,979 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:58:46,995 BaseSubtask: INFO: Copying [logs/test1.csv] to [logs\bak/ftp]
+2018-10-15 22:58:47,013 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:59:13,156 BaseSubtask: INFO: Copying [logs/test1.csv] to [logs\bak/ftp]
+2018-10-15 22:59:13,175 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:59:17,204 BaseSubtask: INFO: Copying [logs/test1.csv] to [logs\bak/ftp]
+2018-10-15 22:59:17,228 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:59:25,278 BaseSubtask: INFO: Copying [logs/test1.csv] to [logs\bak/ftp]
+2018-10-15 22:59:25,305 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:59:55,399 BaseSubtask: INFO: STOP!
+2018-10-15 22:59:55,400 FTPSubtask: INFO: Uploading ALL files in [logs\bak/ftp]...
+2018-10-15 22:59:55,427 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.csv]
+2018-10-15 22:59:55,446 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.mrk]
+2018-10-15 22:59:55,457 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-15 22:59:55,473 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.mrk]
+2018-10-15 22:59:55,474 FTPSubtask: INFO: SFTP DISCONNECT!
+2018-10-16 11:35:05,315 FTPSubtask: INFO: ***** HELLO!: [S/FTP Uploader] *****
+2018-10-16 11:35:05,321 FTPSubtask: INFO: Host port open Success! [DavidJ-PC:22]
+2018-10-16 11:35:05,322 FTPSubtask: INFO: SFTP CONNECT! to [DAVIDJ-PC\David@DavidJ-PC:22/Desktop/winftp/tagreader]
+2018-10-16 11:35:05,707 FTPSubtask: INFO: SFTP: Success! Connected to [DavidJ-PC]
+2018-10-16 11:35:05,815 FTPSubtask: INFO: Uploading ALL files in [logs\bak/ftp]...
+2018-10-16 11:35:05,824 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.csv]
+2018-10-16 11:35:05,832 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.mrk]
+2018-10-16 11:35:05,841 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-16 11:35:05,849 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.mrk]
+2018-10-16 11:35:05,850 BaseSubtask: INFO: START! Polling every [2] secs
+2018-10-16 11:35:15,858 BaseSubtask: INFO: Copying [logs/test1.mrk] to [logs\bak/ftp]
+2018-10-16 11:35:15,892 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.mrk]
+2018-10-16 11:35:17,901 BaseSubtask: INFO: Copying [logs/test1.csv] to [logs\bak/ftp]
+2018-10-16 11:35:17,928 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-16 11:35:25,945 BaseSubtask: INFO: STOP!
+2018-10-16 11:35:25,946 FTPSubtask: INFO: Uploading ALL files in [logs\bak/ftp]...
+2018-10-16 11:35:25,973 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.csv]
+2018-10-16 11:35:25,991 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\residual.mrk]
+2018-10-16 11:35:26,006 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.csv]
+2018-10-16 11:35:26,014 FTPSubtask: INFO: SFTP Upload Data File: [Desktop/winftp/tagreader\test1.mrk]
+2018-10-16 11:35:26,015 FTPSubtask: INFO: SFTP DISCONNECT!
