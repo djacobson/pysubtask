@@ -87,7 +87,7 @@ Note: this master side 'burst mode' feature is not quite the same as a subtask s
 ### Tests
 
 - Platforms tested: **Python 3.6** on **Raspbian**, **Ubuntu 18.10**, **Windows 10**
-- Linux note: Total number of processes allowed per user (``nproc``) default might be set surprisingly low as described [here](https://support.cafex.com/hc/en-us/articles/202508492-Increasing-the-number-of-threads-available-on-Linux). Check your settings in ``/etc/security/limits.conf`` if you have issues, more threads in this or other concurrently running apps, etc.
+- Linux note: Total number of processes allowed per user (``nproc``) default might be set surprisingly low as described [here](https://support.cafex.com/hc/en-us/articles/202508492-Increasing-the-number-of-threads-available-on-Linux). Check your settings in ``/etc/security/limits.conf`` if you have issues, more threads in this or other concurrently running apps, etc. I personally was seeing an intermittent ``GLib-ERROR`` under Raspbian.
 
 ### Dev Notes
 
