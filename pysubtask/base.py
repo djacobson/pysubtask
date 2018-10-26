@@ -509,6 +509,7 @@ def setup_logging(cname, lfname):
 	# logger.error('error message')
 	# logger.critical('critical message')
 
+	logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 	_logger = logging.getLogger(cname)
 	_logger.setLevel(logging.DEBUG)
 

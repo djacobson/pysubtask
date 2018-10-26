@@ -1,6 +1,7 @@
 from setuptools import setup
 
-setup(name='pysubtask',
+setup(
+	name='pysubtask',
 	version='0.1',
 	description='Python master-subtask class pattern designed for resilient, long-running tasks like S/FTP & Dropbox transfers',
 	url='https://github.com/djacobson/pysubtask',
