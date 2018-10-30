@@ -19,15 +19,15 @@ class FTPTaskMaster(BaseTaskMaster):
 	def __init__(
 		self,
 		WatchFiles,
-		pconfig_ftp,
+		pconfig,
 		LogFileName=defaults.ftp.Master_Log_FileName):
 
 		# Fill in non-specified config items with defaults
-		config_ftp = self.combine(pconfig_ftp, defaults.ftp)
+		self.config = self.combine(pconfig, defaults.ftp)
 
 		super().__init__(
 			WatchFiles,
-			config_ftp,
+			self.config,
 			__name__,
 			LogFileName)
 
@@ -36,21 +36,21 @@ class FTPTaskMaster(BaseTaskMaster):
 			LogFileName)
 
 		# Add specific args for FTP Client to SubProc args
-		if config_ftp.UseSFTP:
-			hostPath = config_ftp.HostSFTPPath
+		if self.config.UseSFTP:
+			hostPath = self.config.HostSFTPPath
 		else:
-			hostPath = config_ftp.HostFTPPath
-		passwordEncrypted = self.encode(_SecretKey, config_ftp.Password)
+			hostPath = self.config.HostFTPPath
+		passwordEncrypted = self.encode(_SecretKey, self.config.Password)
 		self._subtaskArgs += [
-			'-u', config_ftp.User,
+			'-u', self.config.User,
 			'-p', passwordEncrypted,
-			'-host', config_ftp.Host,
-			'-port', str(config_ftp.HostPort),
+			'-host', self.config.Host,
+			'-port', str(self.config.HostPort),
 			'-path', hostPath,
-			'-x', str(config_ftp.DeadTimeMilli),
+			'-x', str(self.config.DeadTimeMilli),
 			'-bakto', defaults.ftp.BakToFolder
 		]
-		if config_ftp.UseSFTP:
+		if self.config.UseSFTP:
 			self._subtaskArgs += ['-sftp']
 
 	def stop(self):

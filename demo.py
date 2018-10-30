@@ -70,7 +70,8 @@ def run_app():
 	else:
 		return
 
-	master.start()
+	master.start()  # Plain Start
+	# master.start(precopy_files_from_folder=master.config.BakToFolder)  # Pre-copy previous / old data, then Start
 	get_commands(master)
 	master.stop()
 

@@ -1,0 +1,20 @@
+2018-10-30 17:05:26.631 BaseTaskMaster: INFO: START!
+2018-10-30 17:05:26.647 BaseTaskMaster: INFO: BaseTaskMaster PID = [14868] BaseSubtask PID = [14764]
+2018-10-30 17:05:39.544 BaseTaskMaster: INFO: STOP!: BaseTaskMaster attempting to stop BaseSubtask [14764]...
+2018-10-30 17:05:39.697 BaseTaskMaster: INFO: ***** GOODBYE!: [S/FTP Uploader] *****
+2018-10-30 17:06:38.158 BaseTaskMaster: INFO: START!
+2018-10-30 17:06:38.164 BaseTaskMaster: INFO: BaseTaskMaster PID = [3656] BaseSubtask PID = [6928]
+2018-10-30 17:06:47.981 BaseTaskMaster: INFO: Initial notify (Burst mode)
+2018-10-30 17:06:57.748 BaseTaskMaster: INFO: STOP!: BaseTaskMaster attempting to stop BaseSubtask [6928]...
+2018-10-30 17:06:59.147 BaseTaskMaster: INFO: Cleaning up [logs\test1.csv.notify]
+2018-10-30 17:06:59.147 BaseTaskMaster: INFO: Cleaning up [logs\test1.mrk.notify]
+2018-10-30 17:06:59.147 BaseTaskMaster: INFO: ***** GOODBYE!: [S/FTP Uploader] *****
+2018-10-30 17:10:32.597 BaseTaskMaster: INFO: PreCopy ALL [.csv,.mrk] data from [logs] to [logs\bak/ftp]
+2018-10-30 17:10:32.614 BaseTaskMaster: INFO: START!
+2018-10-30 17:10:32.631 BaseTaskMaster: INFO: BaseTaskMaster PID = [10172] BaseSubtask PID = [4652]
+2018-10-30 17:11:16.614 BaseTaskMaster: INFO: STOP!: BaseTaskMaster attempting to stop BaseSubtask [4652]...
+2018-10-30 17:11:17.581 BaseTaskMaster: INFO: ***** GOODBYE!: [S/FTP Uploader] *****
+2018-10-30 17:12:41.864 BaseTaskMaster: INFO: START!
+2018-10-30 17:12:41.864 BaseTaskMaster: INFO: BaseTaskMaster PID = [14696] BaseSubtask PID = [232]
+2018-10-30 17:12:46.085 BaseTaskMaster: INFO: STOP!: BaseTaskMaster attempting to stop BaseSubtask [232]...
+2018-10-30 17:12:46.714 BaseTaskMaster: INFO: ***** GOODBYE!: [S/FTP Uploader] *****

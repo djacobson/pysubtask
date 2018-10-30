@@ -26,15 +26,15 @@ class DropboxTaskMaster(BaseTaskMaster):
 	def __init__(
 		self,
 		WatchFiles,
-		pconfig_dropbox,
+		pconfig,
 		LogFileName=defaults.dropbox.Master_Log_FileName):
 
 		# Fill in non-specified config items with defaults
-		config_dropbox = self.combine(pconfig_dropbox, defaults.dropbox)
+		self.config = self.combine(pconfig, defaults.dropbox)
 
 		super().__init__(
 			WatchFiles,
-			config_dropbox,
+			self.config,
 			__name__,
 			LogFileName)
 
@@ -44,8 +44,8 @@ class DropboxTaskMaster(BaseTaskMaster):
 
 		# Add specific args for FTP Client to SubProc args
 		self._subtaskArgs += [
-			'-dtoken', config_dropbox.AccessToken,
-			'-x', str(config_dropbox.DeadTimeMilli),
+			'-dtoken', self.config.AccessToken,
+			'-x', str(self.config.DeadTimeMilli),
 			'-bakto', defaults.dropbox.BakToFolder
 		]
 

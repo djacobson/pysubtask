@@ -5,6 +5,8 @@
 
 import sys
 import os
+import shutil
+import glob
 import signal
 import subprocess
 import argparse
@@ -40,7 +42,7 @@ class BaseTaskMaster():
 		LogFileName=defaults.base.Master_Log_FileName):
 
 		# Fill in non-specified config items with defaults
-		config = self.combine(pconfig, defaults.base)
+		self.config = self.combine(pconfig, defaults.base)
 
 		self.baselogger = self.setup_logging(
 			__class__.__name__,
@@ -78,7 +80,7 @@ class BaseTaskMaster():
 			'-m',
 			SubtaskModuleName,
 			'-w', wfiles_arg,
-			'-i', str(config.TimerIntervalSecs)
+			'-i', str(self.config.TimerIntervalSecs)
 		]
 
 		self._subtask = None
@@ -90,9 +92,12 @@ class BaseTaskMaster():
 				new_dict.__dict__[key] = value
 		return new_dict
 
-	def start(self):
-		self.baselogger.info('START!')
+	def start(self, precopy_files_from_folder=None):
+		if precopy_files_from_folder:
+			# First, precopy old data files
+			self.precopy_all_file_types(precopy_files_from_folder)
 		self.cleanup_notify_files_all()
+		self.baselogger.info('START!')
 		self.spawn_subtask()
 
 	def reset(self):
@@ -144,6 +149,38 @@ class BaseTaskMaster():
 				nfile = os.path.join(watchFolder, watchNotifyFile)
 				self.baselogger.info("Cleaning up [{}]".format(nfile))
 				os.remove(nfile)
+
+	def precopy_all_file_types(self, relativeToFolder):
+		# Copy all files in watch list with same .ext to specified folder (i.e.: BakTo folder).
+		# Typically used to grab missed / residual data before start()
+		if not self._watch_files or len(self._watch_files) < 1:
+			return
+		watchFolder = os.path.dirname(self._watch_files[0])
+		if not os.path.exists(watchFolder):
+			return
+		fullToFolder = os.path.join(watchFolder, relativeToFolder)
+
+		# get file extensions
+		fextensions = []
+		for notify_index, wfile in enumerate(self._watch_files):
+			fname, fext = os.path.splitext(wfile)
+			if fext not in fextensions:
+				fextensions.append(fext)
+
+		self.baselogger.info("PreCopy ALL [{}] data from [{}] to [{}]".format(
+			",".join(fextensions),
+			watchFolder,
+			fullToFolder))
+
+		for file_ext in fextensions:
+			file_pattern = '*' + file_ext
+			self.copy_pattern_from_to(file_pattern, watchFolder, fullToFolder)
+
+	def copy_pattern_from_to(self, fpattern, source_dir, dest_dir):
+		files = glob.iglob(os.path.join(source_dir, fpattern))
+		for file in files:
+			if os.path.isfile(file):
+				shutil.copy2(file, dest_dir)
 
 	def notify_all(self):
 		for notify_index, wfile in enumerate(self._watch_files):
@@ -401,7 +438,7 @@ class BaseSubtask():
 			return
 		self._last_notify_dt = datetime.now()
 
-		# If bakTo folder spcified, copy file to it and
+		# If bakTo folder specified, copy file to it and
 		# use the copy as the upload file
 		if self._bakToFullPath:
 			upFile = self.copy_file_to_dir(upFile, self._bakToFullPath)  # returns new copied file name
@@ -509,13 +546,12 @@ def setup_logging(cname, lfname):
 	# logger.error('error message')
 	# logger.critical('critical message')
 
-	logging.basicConfig(format="%(asctime)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 	_logger = logging.getLogger(cname)
 	_logger.setLevel(logging.DEBUG)
 
 	# create formatter
-	logFormat = '%(asctime)s %(name)s: %(levelname)s: %(message)s'
-	formatter = logging.Formatter(logFormat)
+	logFormat = '%(asctime)s.%(msecs)03d %(name)s: %(levelname)s: %(message)s'
+	formatter = logging.Formatter(logFormat, datefmt="%Y-%m-%d %H:%M:%S")
 
 	# create console handler and set level to debug
 	ch = logging.StreamHandler()
