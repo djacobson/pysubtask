@@ -1,6 +1,6 @@
 # pysubtask
 
-`pysubtask` is a subtask and data transfer helper class; V1 is **push** only. It is a packaged module, for integration in any Python app, which implements a task-subtask (parent-child, master-slave, manager-worker, etc.) pattern with convenient extensions specifically for long-running, unreliable tasks like repeated Internet transfers (i.e.: constant updating of data files on a web server). Extensions include FTP, SFTP, and Dropbox. Resiliency is one of the primary design goals.
+**`pysubtask`** is a subtask and data transfer helper class; Version 1 is **push** only. It is a packaged module, for integration in any Python app, which implements a task-subtask (parent-child, master-slave, manager-worker, etc.) pattern with convenient extensions specifically for long-running, unreliable tasks like repeated Internet transfers (i.e.: constant updating of data files on a web server). Extensions include FTP, SFTP, and Dropbox. Resiliency is one of the primary design goals.
 
 ## Quick Start
 
@@ -95,7 +95,7 @@ Note: This master side **burst mode** feature is not quite the same as a subtask
 The following dev topics may or may not result in future changes...
 
 - _To CLI or not to CLI_: Even though `pysubtask` has a CLI ``demo.py`` test app; and it's master class utilizes Popen, the command line, and ``parse_args()`` to so spawn subtasks (child processes); it alone is not intended to be an actual CLI utility (as its main user interface). It is primarily an API / utility class patttern for integration into other Python applications. So, it currently does not have a typical CLI ``setup.py`` installation, with CLI entry points, synonyms, etc. This could change in a future version though.
-- _The multiple_ ``main()`` _'s_: Unique to the way this pattern spawns a separate Python env for the subtask, a separate ``main()`` is required per subtask module. Attempts to use a 'shared' ``main() or _main_.py`` in this specific pattern typically results in a ``ImportError: attempted relative import with no known parent package`` 'Catch 22' import issue after spawning the subtask.
+- _The multiple_ ``main()`` _'s_: Unique to the way this pattern spawns a separate Python env for the subtask, a separate ``main()`` is required per subtask module. Attempts to use a 'shared' ``main() or _main_.py`` in this specific pattern typically results in a ``ImportError: attempted relative import with no known parent package`` "Catch 22" import issue after spawning the subtask.
 - _Doing away with the Master classes in the extension modules, replacing with functions_: With the exception of the ``BaseMaster``, extension Master classes are light, almost simply wrapper classes. Because of this, it is possible that they might be elimanted and replaced with a function. But, there still might be use cases for custom logic to be added to the master, in which case, a master class is useful since the base class (``BaseMaster``) is used to store state data across member function calls.
 
 ### Authors, Contributors, etc.
