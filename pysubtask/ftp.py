@@ -53,6 +53,12 @@ class FTPTaskMaster(BaseTaskMaster):
 		if self.config.UseSFTP:
 			self._subtaskArgs += ['-sftp']
 
+	def start(self, precopy_files=False):
+		if precopy_files:
+			super().start(precopy_files_from_folder=self.config.BakToFolder)
+		else:
+			super().start()
+
 	def stop(self):
 		super().stop(defaults.ftp.SubtaskDescription)
 

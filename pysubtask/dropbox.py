@@ -49,6 +49,12 @@ class DropboxTaskMaster(BaseTaskMaster):
 			'-bakto', defaults.dropbox.BakToFolder
 		]
 
+	def start(self, precopy_files=False):
+		if precopy_files:
+			super().start(precopy_files_from_folder=self.config.BakToFolder)
+		else:
+			super().start()
+
 	def stop(self):
 		super().stop(defaults.dropbox.SubtaskDescription)
 
