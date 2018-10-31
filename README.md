@@ -33,7 +33,7 @@ Enter cmd:
 'r' = Reset the subtask (complete shutdown and restart of the subtask process)
 ```
 
-Enter one or more of the notify commands (a, 0, 1, c) repeatedly, with varying frequency to watch the notifications and 'burst mode' in action (simulating new data being written and 'notified' to the registered data file(s) (see below)). Also observe the log output in the ``logs`` folder, as well as the test data files.
+Enter one or more of the _**Notify**_ commands (a, 0, 1, c) repeatedly, with varying frequency to watch the notifications and **burst mode** in action (simulating new data being written and "notified" to the registered data file(s) (see below)). Also observe the log output in the ``logs`` folder, as well as the test data files.
 
 Experiment with your own data file(s) by editing the following initialization code in ``demo.py``:
 
