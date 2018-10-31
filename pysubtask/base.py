@@ -10,8 +10,7 @@ import glob
 import signal
 import subprocess
 import argparse
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 import time
 import base64
 import logging
@@ -494,10 +493,8 @@ class BaseSubtask():
 		toFileName = os.path.join(toDir, fileBaseName)
 		self.baselogger.info("Copying [{}] to [{}]".format(fromFile, toDir))
 
-		with open(fromFile) as f:
-			lines = f.readlines()
-			with open(toFileName, "w") as f1:
-				f1.writelines(lines)
+		shutil.copy2(fromFile, toDir)
+
 		return toFileName
 
 	def decode(self, key, enc):

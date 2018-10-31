@@ -1,0 +1,8 @@
+2018-10-31 09:28:40.697 BaseTaskMaster: INFO: PreCopy ALL [.csv,.mrk] data from [logs] to [logs\bak/ftp]
+2018-10-31 09:28:40.697 BaseTaskMaster: INFO: START!
+2018-10-31 09:28:40.728 BaseTaskMaster: INFO: BaseTaskMaster PID = [15132] BaseSubtask PID = [16344]
+2018-10-31 09:30:05.731 BaseTaskMaster: INFO: Initial notify (Burst mode)
+2018-10-31 09:30:40.236 BaseTaskMaster: INFO: STOP!: BaseTaskMaster attempting to stop BaseSubtask [16344]...
+2018-10-31 09:30:40.697 BaseTaskMaster: INFO: Cleaning up [logs\test1.csv.notify]
+2018-10-31 09:30:40.697 BaseTaskMaster: INFO: Cleaning up [logs\test1.mrk.notify]
+2018-10-31 09:30:40.697 BaseTaskMaster: INFO: ***** GOODBYE!: [S/FTP Uploader] *****
