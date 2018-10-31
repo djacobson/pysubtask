@@ -75,6 +75,7 @@ Note: This master side 'burst mode' feature is not quite the same as a subtask s
 
 ### To Do
 
+- V1 is primarily a **push** / ``put()`` assistant. It would make sense to add **pull** / ``get()`` to the same module, but, would the subtask try to notify the master? Or just simply get data on a timer interval and rely on the master to poll for it?
 - ``demo.py`` could probably be made into an official test module, moved into a tests folder, and made to work with pytest (including a setyp.py install section for tests)
 - Possible feature: Implement an 'exponential back-off' algorithm in the subtask-side (child) of the S/FTP and Dropbox extension classes. This would be slightly different from 'Burst mode' (task master / parent side), with the objective being to reduce the total number of transfers / transactions over a long period (i.e.: 12 hours), as opposed to just reducing some transfers during a 'burst' of data notifications. This feature would have the secondary goal of avoiding surpassing host transaction limits (i.e.: Dropbox upload limits per day, etc.).
 - Possible enhancement: The 'burst detection' algorithm could be made more robust if it considered number of bytes being written to the data file(s), possibly replacing or as an alternative to frequency of notifications.
