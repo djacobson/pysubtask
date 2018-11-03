@@ -81,6 +81,7 @@ class DropboxSubtask(BaseSubtask):
 
 	def start(self):
 		self.connect(True)  # connect before starting timers ( super().start() )
+		super().start()
 
 	def process_interval(self):
 		if not self.Enabled:
@@ -106,20 +107,30 @@ class DropboxSubtask(BaseSubtask):
 			if self._SubtaskStopNow:
 				return
 			self.dropboxlogger.error("Upload, attempting reconnect.")
-			if not self.connect_once():
-				self.dropboxlogger.error("Upload FAIL'ed to reconnect!")
-				return
+
+			# Attempt reconnect loop process ONCE
+			if not self.is_connected():
+				self.connect()
+				if not self.is_connected():
+					self.ftplogger.error("Upload FAIL'ed to reconnect!")
+					return
+				else:
+					# Successfully reconnected!
+					# Try to upload one more time
+					if self._SubtaskStopNow:
+						return
+					self.upload_file(psWatchFile)
 
 	def connect(self, uploadAllFilesFirst=False):
 		# Cycle infinitely until connected
+
+		# make sure BaseSubtask timer is STOP'ed until connected
+		self._IgnoreTimer = True
+
 		num_retries = 5
 		short_wait = 3  # secs
 		long_wait = 30  # secs
 		connectSuccess = False
-
-		# make sure BaseSubtask timer is STOP'ed until connected
-		if self._Timer:
-			self._Timer.stop()
 
 		while not connectSuccess and not self._SubtaskStopNow:
 			for i in range(num_retries):
@@ -145,7 +156,8 @@ class DropboxSubtask(BaseSubtask):
 		if connectSuccess and not self._SubtaskStopNow:
 			if uploadAllFilesFirst:
 				self.upload_all_in_dir(self._bakToFullPath)
-			super().start()
+
+		self._IgnoreTimer = False
 
 	def connect_once(self):
 		if self.is_connected():
@@ -156,9 +168,6 @@ class DropboxSubtask(BaseSubtask):
 		# 	self._accessToken))
 
 		return self.connectDropbox()
-		# TEST
-		# self._dropbox = DropboxTest()
-		# return True
 
 	def connectDropbox(self):
 		self._dropbox = dropbox.Dropbox(self._accessToken)
@@ -200,6 +209,12 @@ class DropboxSubtask(BaseSubtask):
 			self.dropboxlogger.error("Upload file [{}] does not exist!".format(upFile))
 			return False
 
+		# Check if we need to reconnect
+		if not self.is_connected():
+			self.connect()
+			if not self.is_connected():
+				return False
+
 		upname = os.path.basename(upFile)
 
 		if self._dropbox:
@@ -210,6 +225,7 @@ class DropboxSubtask(BaseSubtask):
 					True)
 			except Exception as e:
 				self.dropboxlogger.error("Upload Data File: [{}]".format(e))
+				self.disconnect()
 				return False
 			else:
 				# self.dropboxlogger.info("Upload Data File: [{}]".format(upname))
@@ -269,12 +285,6 @@ class DropboxSubtask(BaseSubtask):
 			help="Elapsed 'dead' time in milliseconds with NO Data before rest'ing Dropbox")
 
 		return parser
-
-
-class DropboxTest():
-
-	def __init__(self):
-		pass
 
 
 def spawn_subtask():

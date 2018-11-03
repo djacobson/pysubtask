@@ -12,9 +12,9 @@ ftp.UseFTP = True
 # David's Dev S/FTP Server
 ftp.UseSFTP = True  # True = sftp protcol, False = unsecure ftp protcol
 ftp.User = "DAVIDJ-PC\David"
-ftp.Password = "**********"
+ftp.Password = "**************"
 ftp.Host = "DavidJ-PC"
-ftp.HostFTPPath = "tagreader"
+ftp.HostFTPPath = 'tagreader'
 ftp.HostSFTPPath = 'Desktop/winftp/tagreader'
 # 180000 millisecs = 3 mins, Time of no notifies before 'REST'ing
 ftp.DeadTimeMilli = 40000

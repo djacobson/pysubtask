@@ -97,6 +97,7 @@ class FTPSubtask(BaseSubtask):
 
 	def start(self):
 		self.connect(True)  # connect before starting timers ( super().start() )
+		super().start()
 
 	def process_interval(self):
 		if not self.Enabled:
@@ -122,38 +123,37 @@ class FTPSubtask(BaseSubtask):
 			if self._SubtaskStopNow:
 				return
 			self.ftplogger.error("Upload, attempting reconnect.")
-			if not self.connect_once():
-				self.ftplogger.error("Upload FAIL'ed to reconnect!")
-				return
+
+			# Attempt reconnect loop process ONCE
+			if not self.is_connected():
+				self.connect()
+				if not self.is_connected():
+					self.ftplogger.error("Upload FAIL'ed to reconnect!")
+					return
+				else:
+					# Successfully reconnected!
+					# Try to upload one more time
+					if self._SubtaskStopNow:
+						return
+					self.upload_file(psWatchFile)
 
 	def connect(self, uploadAllFilesFirst=False):
 		# Cycle infinitely until connected
+
+		# make sure BaseSubtask timer is STOP'ed until connected
+		self._IgnoreTimer = True
+
 		num_retries = 5
 		short_wait = 3  # secs
 		long_wait = 30  # secs
 		connectSuccess = False
-
-		# make sure BaseSubtask timer is STOP'ed until connected
-		if self._Timer:
-			self._Timer.stop()
 
 		while not connectSuccess and not self._SubtaskStopNow:
 			for i in range(num_retries):
 				if self._SubtaskStopNow:
 					break
 
-				# TMP: Testing failed connections
-				# change i to be > num_retries to simulate infinite connect failures
-				#
-				# if block will be replaced with simply...
-				#   connectSuccess = self.connect_once()
-				#
-				# if i == 3:
-					# connectSuccess = self.connect_once()
-				# else:
-					# connectSuccess = self.connect_TEST_FAIL()
-
-				connectSuccess = self.connect_once()
+				connectSuccess = self.connect_once(retries=num_retries)
 
 				if connectSuccess:
 					break
@@ -171,13 +171,14 @@ class FTPSubtask(BaseSubtask):
 		if connectSuccess and not self._SubtaskStopNow:
 			if uploadAllFilesFirst:
 				self.upload_all_in_dir(self._bakToFullPath)
-			super().start()
 
-	def connect_once(self):
+		self._IgnoreTimer = False
+
+	def connect_once(self, retries=0):
 		if self.is_connected():
 			self.disconnect()
 
-		if not self.isHostOpen(self._Host, self._HostPort, 5):
+		if not self.isHostOpen(self._Host, self._HostPort, retries):
 			self.ftplogger.error("Host not open! [{}:{}]".format(
 				self._Host,
 				self._HostPort))
@@ -193,9 +194,6 @@ class FTPSubtask(BaseSubtask):
 				self._HostPort,
 				self._HostPath))
 			return self.connectSFTP()
-			# TEST
-			# self._sftp = FTPTest()
-			# return True
 		else:
 			self.ftplogger.info("FTP CONNECT! to [{}@{}:{}/{}]".format(
 				self._User,
@@ -203,12 +201,6 @@ class FTPSubtask(BaseSubtask):
 				self._HostPort,
 				self._HostPath))
 			return self.connectFTP()
-			# TEST
-			# self._ftp = FTPTest()
-			# return True
-
-	def connect_TEST_FAIL(self):
-		return False  # TMP
 
 	def connectSFTP(self):
 		import pysftp
@@ -354,6 +346,12 @@ class FTPSubtask(BaseSubtask):
 			self.ftplogger.error("Upload file [{}] does not exist!".format(upFile))
 			return False
 
+		# Check if we need to reconnect
+		if not self.is_connected():
+			self.connect()
+			if not self.is_connected():
+				return False
+
 		upname = os.path.basename(upFile)
 
 		if self._useSFTP and self._sftp:
@@ -362,6 +360,7 @@ class FTPSubtask(BaseSubtask):
 				self._sftp.put(upFile, preserve_mtime=True)
 			except Exception as e:
 				self.ftplogger.error("SFTP Upload Data File: [{}]".format(e))
+				self.disconnect()
 				return False
 			else:
 				self.ftplogger.info("SFTP Upload Data File: [{}]".format(
@@ -373,6 +372,7 @@ class FTPSubtask(BaseSubtask):
 				self._ftp.storbinary('STOR ' + upname, open(upFile, 'rb'))
 			except Exception as e:
 				self.ftplogger.error("FTP Upload Data File: [{}]".format(e))
+				self.disconnect()
 				return False
 			else:
 				self.ftplogger.info("FTP Upload Data File: [{}]".format(
@@ -437,12 +437,6 @@ class FTPSubtask(BaseSubtask):
 			help='Use SFTP, else (if not included), use regular FTP')
 
 		return parser
-
-
-class FTPTest():
-
-	def __init__(self):
-		pass
 
 
 def spawn_subtask():

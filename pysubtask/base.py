@@ -352,6 +352,7 @@ class BaseSubtask():
 
 		self._Timer = None
 		self._SubtaskStopNow = False
+		self._IgnoreTimer = False
 
 		self._last_notify_dt = datetime.now()  # Start of app is first notify dt
 
@@ -400,6 +401,8 @@ class BaseSubtask():
 
 	def _process(self):
 		# Not meant to be Overridden.
+		if self._IgnoreTimer:
+			return
 		self._process_interval()
 		if self._SubtaskStopNow:
 			return
