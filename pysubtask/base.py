@@ -176,6 +176,9 @@ class BaseTaskMaster():
 			self.copy_pattern_from_to(file_pattern, watchFolder, fullToFolder)
 
 	def copy_pattern_from_to(self, fpattern, source_dir, dest_dir):
+		if not os.path.exists(dest_dir):
+			os.makedirs(dest_dir)
+
 		files = glob.iglob(os.path.join(source_dir, fpattern))
 		for file in files:
 			if os.path.isfile(file):
