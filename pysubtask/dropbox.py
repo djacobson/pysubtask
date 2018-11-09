@@ -27,7 +27,8 @@ class DropboxTaskMaster(BaseTaskMaster):
 		self,
 		WatchFiles,
 		pconfig,
-		LogFileName=defaults.dropbox.Master_Log_FileName):
+		LogFileName=defaults.dropbox.Master_Log_FileName,
+		LogToConsole=True):
 
 		# Fill in non-specified config items with defaults
 		self.config = self.combine(pconfig, defaults.dropbox)
@@ -36,11 +37,13 @@ class DropboxTaskMaster(BaseTaskMaster):
 			WatchFiles,
 			self.config,
 			__name__,
-			LogFileName)
+			LogFileName,
+			LogToConsole)
 
 		self.dropboxlogger = self.setup_logging(
 			__class__.__name__,
-			LogFileName)
+			LogFileName,
+			LogToConsole)
 
 		# Add specific args for FTP Client to SubProc args
 		self._subtaskArgs += [
@@ -64,12 +67,17 @@ class DropboxSubtask(BaseSubtask):
 	_Description = defaults.dropbox.SubtaskDescription
 	dropboxlogger = None
 
-	def __init__(self, args, LogFileName=defaults.dropbox.Subtask_Log_FileName):
+	def __init__(
+		self,
+		args,
+		LogFileName=defaults.dropbox.Subtask_Log_FileName):
+
 		super().__init__(args, LogFileName)
 
 		self.dropboxlogger = self.setup_logging(
 			__class__.__name__,
-			LogFileName)
+			LogFileName,
+			not args.noconsole)
 
 		# User config settings
 		self.Enabled = True  # False = Dropbox not used but Dropbox Subtask still spawned

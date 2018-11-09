@@ -49,6 +49,7 @@ def get_commands(master):
 
 
 def run_app():
+
 	uploadfiles = [
 		{'file': 'logs/test1.csv', 'burstmode': True},
 		{'file': 'logs/test1.mrk', 'burstmode': False}
@@ -59,13 +60,13 @@ def run_app():
 
 		# Use S/FTP
 		from pysubtask.ftp import FTPTaskMaster
-		master = FTPTaskMaster(uploadfiles, config.ftp)
+		master = FTPTaskMaster(uploadfiles, config.ftp, LogToConsole=True)
 
 	elif config.dropbox.UseDropbox:
 
 		# Use DropBox
 		from pysubtask.dropbox import DropboxTaskMaster
-		master = DropboxTaskMaster(uploadfiles, config.dropbox)
+		master = DropboxTaskMaster(uploadfiles, config.dropbox, LogToConsole=True)
 
 	else:
 		return

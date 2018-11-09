@@ -20,7 +20,8 @@ class FTPTaskMaster(BaseTaskMaster):
 		self,
 		WatchFiles,
 		pconfig,
-		LogFileName=defaults.ftp.Master_Log_FileName):
+		LogFileName=defaults.ftp.Master_Log_FileName,
+		LogToConsole=True):
 
 		# Fill in non-specified config items with defaults
 		self.config = self.combine(pconfig, defaults.ftp)
@@ -29,11 +30,13 @@ class FTPTaskMaster(BaseTaskMaster):
 			WatchFiles,
 			self.config,
 			__name__,
-			LogFileName)
+			LogFileName,
+			LogToConsole)
 
 		self.ftplogger = self.setup_logging(
 			__class__.__name__,
-			LogFileName)
+			LogFileName,
+			LogToConsole)
 
 		# Add specific args for FTP Client to SubProc args
 		if self.config.UseSFTP:
@@ -68,12 +71,17 @@ class FTPSubtask(BaseSubtask):
 	_Description = defaults.ftp.SubtaskDescription
 	ftplogger = None
 
-	def __init__(self, args, LogFileName=defaults.ftp.Subtask_Log_FileName):
+	def __init__(
+		self,
+		args,
+		LogFileName=defaults.ftp.Subtask_Log_FileName):
+
 		super().__init__(args, LogFileName)
 
 		self.ftplogger = self.setup_logging(
 			__class__.__name__,
-			LogFileName)
+			LogFileName,
+			not args.noconsole)
 
 		# User config settings
 		self.Enabled = True  # False = FTP not used but FTP Subtask still spawned

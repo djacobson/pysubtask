@@ -38,14 +38,16 @@ class BaseTaskMaster():
 		WatchFiles,
 		pconfig,
 		SubtaskModuleName=__name__,
-		LogFileName=defaults.base.Master_Log_FileName):
+		LogFileName=defaults.base.Master_Log_FileName,
+		LogToConsole=True):
 
 		# Fill in non-specified config items with defaults
 		self.config = self.combine(pconfig, defaults.base)
 
 		self.baselogger = self.setup_logging(
 			__class__.__name__,
-			LogFileName)
+			LogFileName,
+			LogToConsole)
 
 		# Covert WatchFiles List to argument
 		self._watch_files = []
@@ -81,6 +83,8 @@ class BaseTaskMaster():
 			'-w', wfiles_arg,
 			'-i', str(self.config.TimerIntervalSecs)
 		]
+		if not LogToConsole:
+			self._subtaskArgs += ['-noconsole']
 
 		self._subtask = None
 
@@ -328,8 +332,8 @@ class BaseTaskMaster():
 			enc.append(enc_c)
 		return base64.urlsafe_b64encode("".join(enc).encode()).decode()
 
-	def setup_logging(self, cname, lfname):
-		return setup_logging(cname, lfname)
+	def setup_logging(self, cname, lfname, LogToConsole=True):
+		return setup_logging(cname, lfname, LogToConsole)
 
 
 class BaseSubtask():
@@ -337,11 +341,15 @@ class BaseSubtask():
 	_Description = defaults.base.SubtaskDescription
 	baselogger = None
 
-	def __init__(self, args, LogFileName=defaults.base.Subtask_Log_FileName):
+	def __init__(
+		self,
+		args,
+		LogFileName=defaults.base.Subtask_Log_FileName):
 
 		self.baselogger = self.setup_logging(
 			__class__.__name__,
-			LogFileName)
+			LogFileName,
+			not args.noconsole)
 
 		self._TimerIntervalSecs = args.interval_secs  # secs
 
@@ -535,13 +543,20 @@ class BaseSubtask():
 			default=defaults.base.BakToFolder,
 			help='Folder where to copy notified files to')
 
+		parser.add_argument(
+			'-noconsole', '--noconsole',
+			dest='noconsole',
+			action='store_true',
+			default=False,
+			help='If specified, do not log to the console')
+
 		return parser
 
-	def setup_logging(self, cname, lfname):
-		return setup_logging(cname, lfname)
+	def setup_logging(self, cname, lfname, LogToConsole=True):
+		return setup_logging(cname, lfname, LogToConsole)
 
 
-def setup_logging(cname, lfname):
+def setup_logging(cname, lfname, LogToConsole=True):
 	# 'application' code
 	# logger.debug('debug message')
 	# logger.info('info message')
@@ -553,14 +568,15 @@ def setup_logging(cname, lfname):
 	_logger.setLevel(logging.DEBUG)
 
 	# create formatter
-	logFormat = '%(asctime)s.%(msecs)03d %(name)s: %(levelname)s: %(message)s'
+	logFormat = '%(asctime)s.%(msecs)03d [%(module)s.%(name)s]: %(levelname)s: %(message)s'
 	formatter = logging.Formatter(logFormat, datefmt="%Y-%m-%d %H:%M:%S")
 
-	# create console handler and set level to debug
-	ch = logging.StreamHandler()
-	ch.setLevel(logging.DEBUG)
-	ch.setFormatter(formatter)  # add formatter to ch
-	_logger.addHandler(ch)  # add ch to logger
+	if LogToConsole:
+		# create console handler and set level to debug
+		ch = logging.StreamHandler()
+		ch.setLevel(logging.DEBUG)
+		ch.setFormatter(formatter)  # add formatter to ch
+		_logger.addHandler(ch)  # add ch to logger
 
 	# create log file
 	lfpath = os.path.dirname(lfname)
