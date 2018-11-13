@@ -45,17 +45,23 @@ class DropboxTaskMaster(BaseTaskMaster):
 			LogFileName,
 			LogToConsole)
 
-		# Add specific args for FTP Client to SubProc args
+		# Add specific args for Dropbox Client to SubProc args
 		self._subtaskArgs += [
 			'-dtoken', self.config.AccessToken,
-			'-x', str(self.config.DeadTimeMilli),
 			'-bakto', defaults.dropbox.BakToFolder
 		]
+		# Only add these args if they differ from default config
+		if self.config.DeadTimeMilli != defaults.dropbox.DeadTimeMilli:
+			self._subtaskArgs += ['-x', str(self.config.DeadTimeMilli)]
 
-	def start(self, precopy_files=False):
-		if precopy_files:
-			super().start(precopy_files_from_folder=self.config.BakToFolder)
+	def start(self, precleanup_old_files=False):
+		if precleanup_old_files:
+			# Pre-archive old data & pre-copy and upload previous residual data, then Start
+			super().start(
+				prearchive_expired_files_to_folder=defaults.base.ArchiveToFolder,
+				precopy_files_to_folder=self.config.BakToFolder)
 		else:
+			# Just Start
 			super().start()
 
 	def stop(self):

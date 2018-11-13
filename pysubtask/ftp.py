@@ -48,18 +48,25 @@ class FTPTaskMaster(BaseTaskMaster):
 			'-u', self.config.User,
 			'-p', passwordEncrypted,
 			'-host', self.config.Host,
-			'-port', str(self.config.HostPort),
 			'-path', hostPath,
-			'-x', str(self.config.DeadTimeMilli),
 			'-bakto', defaults.ftp.BakToFolder
 		]
 		if self.config.UseSFTP:
 			self._subtaskArgs += ['-sftp']
+		# Only add these args if they differ from default config
+		if self.config.HostPort != defaults.ftp.HostPort:
+			self._subtaskArgs += ['-port', str(self.config.HostPort)]
+		if self.config.DeadTimeMilli != defaults.ftp.DeadTimeMilli:
+			self._subtaskArgs += ['-x', str(self.config.DeadTimeMilli)]
 
-	def start(self, precopy_files=False):
-		if precopy_files:
-			super().start(precopy_files_from_folder=self.config.BakToFolder)
+	def start(self, precleanup_old_files=False):
+		if precleanup_old_files:
+			# Pre-archive old data & pre-copy and upload previous residual data, then Start
+			super().start(
+				prearchive_expired_files_to_folder=defaults.base.ArchiveToFolder,
+				precopy_files_to_folder=self.config.BakToFolder)
 		else:
+			# Just Start
 			super().start()
 
 	def stop(self):
@@ -178,7 +185,7 @@ class FTPSubtask(BaseSubtask):
 
 		if connectSuccess and not self._SubtaskStopNow:
 			if uploadAllFilesFirst:
-				self.upload_all_in_dir(self._bakToFullPath)
+				self.upload_all_in_dir(self._bakToFullPath, clearFiles=True)
 
 		self._IgnoreTimer = False
 
@@ -387,14 +394,17 @@ class FTPSubtask(BaseSubtask):
 					os.path.join(self._HostPath, upname)))
 				return True
 
-	def upload_all_in_dir(self, upDir):
+	def upload_all_in_dir(self, upDir, clearFiles=False):
 		if not upDir or not os.path.exists(upDir):
 			return
 		self.ftplogger.info("Uploading ALL files in [{}]...".format(upDir))
 
 		allFiles = [f for f in os.listdir(upDir) if os.path.isfile(os.path.join(upDir, f))]
 		for bakFile in allFiles:
-			self.upload_file(os.path.join(upDir, bakFile))
+			upFile = os.path.join(upDir, bakFile)
+			self.upload_file(upFile)
+			if clearFiles:
+				os.remove(upFile)
 
 	def parse_args_init(self, psDescription):
 		parser = BaseSubtask.parse_args_init(None, psDescription)

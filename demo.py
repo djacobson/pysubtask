@@ -71,7 +71,9 @@ def run_app():
 	else:
 		return
 
-	master.start(precopy_files=True)  # Pre-copy previous / old data, then Start
+	# Pre-archive old data & pre-copy and upload previous residual data, then Start
+	master.start(precleanup_old_files=True)
+
 	get_commands(master)
 	master.stop()
 

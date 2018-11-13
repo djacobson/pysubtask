@@ -10,7 +10,7 @@ import glob
 import signal
 import subprocess
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 import time
 import base64
 import logging
@@ -76,15 +76,18 @@ class BaseTaskMaster():
 
 		PythonName = sys.executable
 
+		# Add specific args for base SubProc
 		self._subtaskArgs = [
 			PythonName,
 			'-m',
 			SubtaskModuleName,
-			'-w', wfiles_arg,
-			'-i', str(self.config.TimerIntervalSecs)
+			'-w', wfiles_arg
 		]
 		if not LogToConsole:
 			self._subtaskArgs += ['-noconsole']
+		# Only add these args if they differ from default config
+		if self.config.TimerIntervalSecs != defaults.base.TimerIntervalSecs:
+			self._subtaskArgs += ['-i', str(self.config.TimerIntervalSecs)]
 
 		self._subtask = None
 
@@ -95,10 +98,13 @@ class BaseTaskMaster():
 				new_dict.__dict__[key] = value
 		return new_dict
 
-	def start(self, precopy_files_from_folder=None):
-		if precopy_files_from_folder:
-			# First, precopy old data files
-			self.precopy_all_file_types(precopy_files_from_folder)
+	def start(self, prearchive_expired_files_to_folder=None, precopy_files_to_folder=None):
+		if prearchive_expired_files_to_folder:
+			# First, prearchive expired files (all files types in log dir)
+			self.archive_expired_files(prearchive_expired_files_to_folder)
+		if precopy_files_to_folder:
+			# Second, precopy old / residual data files types (for preuplaod, etc.)
+			self.copy_all_file_types(precopy_files_to_folder)
 		self.cleanup_notify_files_all()
 		self.baselogger.info('START!')
 		self.spawn_subtask()
@@ -153,7 +159,7 @@ class BaseTaskMaster():
 				self.baselogger.info("Cleaning up [{}]".format(nfile))
 				os.remove(nfile)
 
-	def precopy_all_file_types(self, relativeToFolder):
+	def copy_all_file_types(self, relativeToFolder):
 		# Copy all files in watch list with same .ext to specified folder (i.e.: BakTo folder).
 		# Typically used to grab missed / residual data before start()
 		if not self._watch_files or len(self._watch_files) < 1:
@@ -178,6 +184,63 @@ class BaseTaskMaster():
 		for file_ext in fextensions:
 			file_pattern = '*' + file_ext
 			self.copy_pattern_from_to(file_pattern, watchFolder, fullToFolder)
+
+	def archive_expired_files(self, relativeToFolder):
+		days_old = defaults.base.ArchiveAfterDaysOld
+		move_date = date.today() - timedelta(days=days_old)
+		move_date = time.mktime(move_date.timetuple())
+
+		# Archive all expired files to specified folder (i.e.: logs/archive folder).
+		if not self._watch_files or len(self._watch_files) < 1:
+			return
+		watchFolder = os.path.dirname(self._watch_files[0])
+		if not os.path.exists(watchFolder):
+			return
+		fullToFolder = os.path.join(watchFolder, relativeToFolder)
+
+		self.baselogger.info("Archiving expired files from [{}] to [{}]".format(
+			watchFolder,
+			fullToFolder))
+
+		arch_files_found = False
+
+		for file in os.listdir(watchFolder):
+			fullfile = os.path.join(watchFolder, file)
+			if os.path.isfile(fullfile):
+				filetime = os.stat(fullfile).st_mtime
+				if filetime < move_date:
+					arch_files_found = True
+
+					# Build archive path and file name
+					fdate = datetime.fromtimestamp(filetime)
+					archpath = '{}{:02d}'.format(fdate.year, fdate.month)
+					archpath = os.path.join(archpath, '{:02d}'.format(fdate.day))
+					archpath = os.path.join(fullToFolder, archpath)
+					archfullfile = os.path.join(archpath, file)
+					if not os.path.exists(archpath):
+						os.makedirs(archpath)
+					else:
+						archfullfile = self.getAvailableFileName(archfullfile)
+
+					# Archive file
+					self.baselogger.info("Archiving [{}]".format(archfullfile))
+					shutil.copy2(fullfile, archfullfile)
+					os.remove(fullfile)
+
+		if not arch_files_found:
+			self.baselogger.info("No expired files found to Archive")
+
+	def getAvailableFileName(self, pfname):
+		if os.path.exists(pfname):
+			filename, file_extension = os.path.splitext(pfname)
+			i = 1
+			while True:
+				nfname = "{}_{}{}".format(filename, i, file_extension)
+				if not os.path.exists(nfname):
+					return nfname
+				i += 1
+		else:
+			return pfname
 
 	def copy_pattern_from_to(self, fpattern, source_dir, dest_dir):
 		if not os.path.exists(dest_dir):
@@ -226,13 +289,13 @@ class BaseTaskMaster():
 		# burst_mode['count']
 
 		if prev_notify_dt:
-			notify_delta_milli = self.timedelta_milliseconds(curr_notify_dt - prev_notify_dt)
+			notify_delta_milli = timedelta_milliseconds(curr_notify_dt - prev_notify_dt)
 			# Q: Have we already started a Burst buffering mode?
 			if burst_mode['start_dt']:
 				# Y: Burst mode already started
 
 				# Q: Has our Burst window expired (regardless of whther we're still bursting)?
-				if self.timedelta_milliseconds(curr_notify_dt - burst_mode['start_dt']) >= burst_expire_milli:
+				if timedelta_milliseconds(curr_notify_dt - burst_mode['start_dt']) >= burst_expire_milli:
 					# Y: Burst buffer expired. Time to release it / notify.
 					self.baselogger.info("Burst (previous) expired. Notifying! [{}]".format(
 						burst_expire_milli))
@@ -311,9 +374,6 @@ class BaseTaskMaster():
 			else:
 				# self.baselogger.info('No pending data to release / notify.')
 				pass
-
-	def timedelta_milliseconds(self, td):
-		return td.days * 86400000 + td.seconds * 1000 + td.microseconds / 1000
 
 	def touch(self, fname, mode=0o666, dir_fd=None, **kwargs):
 		# https://stackoverflow.com/questions/1158076/implement-touch-using-python
@@ -469,10 +529,7 @@ class BaseSubtask():
 		if not self._last_notify_dt:
 			return None
 		else:
-			return self.timedelta_milliseconds(datetime.now() - self._last_notify_dt)
-
-	def timedelta_milliseconds(self, td):
-		return td.days * 86400000 + td.seconds * 1000 + td.microseconds / 1000
+			return timedelta_milliseconds(datetime.now() - self._last_notify_dt)
 
 	def stop(self):
 		self._SubtaskStopNow = True
@@ -554,6 +611,10 @@ class BaseSubtask():
 
 	def setup_logging(self, cname, lfname, LogToConsole=True):
 		return setup_logging(cname, lfname, LogToConsole)
+
+
+def timedelta_milliseconds(td):
+	return td.days * 86400000 + td.seconds * 1000 + td.microseconds / 1000
 
 
 def setup_logging(cname, lfname, LogToConsole=True):
