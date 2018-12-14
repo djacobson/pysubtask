@@ -2,6 +2,7 @@
 # Script: pysubtask.base.py Module
 #
 # Author V1: David Jacobson (david@jacobsonhome.com)
+# https://github.com/djacobson/pysubtask
 
 import sys
 import os

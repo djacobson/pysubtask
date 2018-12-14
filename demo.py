@@ -2,6 +2,7 @@
 # Script: pysubtask/demo.py Module
 #
 # Author V1: David Jacobson (david@jacobsonhome.com)
+# https://github.com/djacobson/pysubtask
 
 import demo_config as config
 

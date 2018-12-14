@@ -2,6 +2,7 @@
 # Script: pysubtask.defaults_config.py
 #
 # Author V1: David Jacobson (david@jacobsonhome.com)
+# https://github.com/djacobson/pysubtask
 
 from ._config import Struct as Section
 

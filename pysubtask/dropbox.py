@@ -2,6 +2,7 @@
 # Script: pysubtask.dropbox.py Module
 #
 # Author V1: David Jacobson (david@jacobsonhome.com)
+# https://github.com/djacobson/pysubtask
 #
 # Dropbox:
 #
