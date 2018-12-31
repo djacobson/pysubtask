@@ -36,7 +36,7 @@ class BaseTaskMaster():
 
 	def __init__(
 		self,
-		WatchFiles,
+		WatchFilesDirs,
 		pconfig,
 		SubtaskModuleName=__name__,
 		LogFileName=defaults.base.Master_Log_FileName,
@@ -50,30 +50,59 @@ class BaseTaskMaster():
 			LogFileName,
 			LogToConsole)
 
-		# Covert WatchFiles List to argument
+		# Create Watch files and/or dirs list
+		self.init_files(WatchFilesDirs)
+		if len(self._watch_files) < 1 and len(self._watch_dirs) < 1:
+			self.baselogger.error("No Watch files or dirs specified!")
+			return
+
+		# Convert WatchFiles list to arguments for subtask
+		self.init_args(SubtaskModuleName, LogToConsole)
+
+		self._subtask = None
+
+	def init_files(self, WatchFilesDirs):
+		# Create WatchFiles list
 		self._watch_files = []
 		self._watch_files_state = []
-		for wfile in WatchFiles:
-			self._watch_files.append(wfile['file'])
-			wfile_state = {
-				'prev_notify_dt': None,
-				'pending_data_dt': None,
-				'burst_mode': None
-			}
+		# Create WatchDirs list
+		self._watch_dirs = []
 
-			if wfile['burstmode']:
-				wfile_burst_mode = {
-					'start_dt': None,
-					'count': 0,
-					'start_trigger_milli': defaults.burst_mode.start_trigger_milli,
-					'start_trigger_count': defaults.burst_mode.start_trigger_count,
-					'expire_milli': defaults.burst_mode.expire_milli
+		for wfile in WatchFilesDirs:
+			if 'file' in wfile:
+				self._watch_files.append(wfile['file'])
+				wfile_state = {
+					'prev_notify_dt': None,
+					'pending_data_dt': None,
+					'burst_mode': None
 				}
-				wfile_state['burst_mode'] = wfile_burst_mode
 
-			self._watch_files_state.append(wfile_state)
+				if wfile['burstmode']:
+					wfile_burst_mode = {
+						'start_dt': None,
+						'count': 0,
+						'start_trigger_milli': defaults.burst_mode.start_trigger_milli,
+						'start_trigger_count': defaults.burst_mode.start_trigger_count,
+						'expire_milli': defaults.burst_mode.expire_milli
+					}
+					wfile_state['burst_mode'] = wfile_burst_mode
+				self._watch_files_state.append(wfile_state)
 
+			elif 'dir' in wfile:
+				self._watch_dirs.append(wfile['dir'])
+				# ToDo: Implement burstmode for dirs (i.e.: all files in dir)
+
+			else:
+				self.baselogger.error("Unknown Watch list key [{}]".format(wfile))
+
+	def init_args(
+		self,
+		SubtaskModuleName=__name__,
+		LogToConsole=True):
+
+		# Convert WatchFiles list to arguments for subtask
 		wfiles_arg = '"{}"'.format(','.join(map(str, self._watch_files)))
+		wdirs_arg = '"{}"'.format(','.join(map(str, self._watch_dirs)))
 
 		PythonName = sys.executable
 
@@ -81,16 +110,17 @@ class BaseTaskMaster():
 		self._subtaskArgs = [
 			PythonName,
 			'-m',
-			SubtaskModuleName,
-			'-w', wfiles_arg
+			SubtaskModuleName
 		]
+		if len(self._watch_files) > 0:
+			self._subtaskArgs += ['-wf', wfiles_arg]
+		if len(self._watch_dirs) > 0:
+			self._subtaskArgs += ['-wd', wdirs_arg]
 		if not LogToConsole:
 			self._subtaskArgs += ['-noconsole']
 		# Only add these args if they differ from default config
 		if self.config.TimerIntervalSecs != defaults.base.TimerIntervalSecs:
 			self._subtaskArgs += ['-i', str(self.config.TimerIntervalSecs)]
-
-		self._subtask = None
 
 	def combine(self, master_dict, add_this_dict):
 		new_dict = master_dict
@@ -100,13 +130,13 @@ class BaseTaskMaster():
 		return new_dict
 
 	def start(self, prearchive_expired_files_to_folder=None, precopy_files_to_folder=None):
+		self.cleanup_all_notify_files()
 		if prearchive_expired_files_to_folder:
 			# First, prearchive expired files (all files types in log dir)
 			self.archive_expired_files(prearchive_expired_files_to_folder)
 		if precopy_files_to_folder:
 			# Second, precopy old / residual data files types (for preuplaod, etc.)
-			self.copy_all_file_types(precopy_files_to_folder)
-		self.cleanup_notify_files_all()
+			self.copy_residual_files(precopy_files_to_folder)
 		self.baselogger.info('START!')
 		self.spawn_subtask()
 
@@ -136,7 +166,7 @@ class BaseTaskMaster():
 			else:
 				self._subtask.terminate()
 			self._subtask.wait()
-		self.cleanup_notify_files_all()
+		self.cleanup_all_notify_files()
 		self.baselogger.info("***** GOODBYE!: [{}] *****".format(subtaskDescription))
 
 	def cleanup_notify_files(self):
@@ -146,67 +176,109 @@ class BaseTaskMaster():
 				self.baselogger.info("Cleaning up [{}]".format(nfile))
 				os.remove(nfile)
 
-	def cleanup_notify_files_all(self):
-		if not self._watch_files or len(self._watch_files) < 1:
-			return
-		watchFolder = os.path.dirname(self._watch_files[0])
-		if not os.path.exists(watchFolder):
-			return
+	def cleanup_all_notify_files(self):
+		if self._watch_files and len(self._watch_files) > 0:
+			watchFolder = os.path.dirname(self._watch_files[0])
+			if os.path.exists(watchFolder):
+				self.cleanup_all_notify_files_in_folder(watchFolder)
 
-		allFiles = [f for f in os.listdir(watchFolder) if os.path.isfile(os.path.join(watchFolder, f))]
+		for watchFolder in self._watch_dirs:
+			if os.path.exists(watchFolder):
+				self.cleanup_all_notify_files_in_folder(watchFolder)
+
+	def cleanup_all_notify_files_in_folder(self, inFolder):
+		allFiles = [f for f in os.listdir(inFolder) if os.path.isfile(os.path.join(inFolder, f))]
 		for watchNotifyFile in allFiles:
 			if watchNotifyFile.endswith('.notify'):
-				nfile = os.path.join(watchFolder, watchNotifyFile)
+				nfile = os.path.join(inFolder, watchNotifyFile)
 				self.baselogger.info("Cleaning up [{}]".format(nfile))
 				os.remove(nfile)
 
-	def copy_all_file_types(self, relativeToFolder):
+	def copy_residual_files(self, relativeToFolder):
 		# Copy all files in watch list with same .ext to specified folder (i.e.: BakTo folder).
 		# Typically used to grab missed / residual data before start()
-		if not self._watch_files or len(self._watch_files) < 1:
-			return
-		watchFolder = os.path.dirname(self._watch_files[0])
-		if not os.path.exists(watchFolder):
-			return
-		fullToFolder = os.path.join(watchFolder, relativeToFolder)
+		residual_files_found = False
+		if self._watch_files and len(self._watch_files) > 0:
+			watchFolder = os.path.dirname(self._watch_files[0])
+			if os.path.exists(watchFolder):
+				fullToFolder = os.path.join(watchFolder, relativeToFolder)
 
-		# get file extensions
-		fextensions = []
-		for notify_index, wfile in enumerate(self._watch_files):
-			fname, fext = os.path.splitext(wfile)
-			if fext not in fextensions:
-				fextensions.append(fext)
+				# get file extensions
+				fextensions = []
+				for notify_index, wfile in enumerate(self._watch_files):
+					fname, fext = os.path.splitext(wfile)
+					if fext not in fextensions:
+						fextensions.append(fext)
 
-		self.baselogger.info("PreCopy ALL [{}] data from [{}] to [{}]".format(
-			",".join(fextensions),
-			watchFolder,
-			fullToFolder))
+				self.baselogger.info("PreCopy ALL [{}] Residual data from [{}] to [{}]".format(
+					",".join(fextensions),
+					watchFolder,
+					fullToFolder))
+				residual_files_found = self.copy_file_types_from_to(fextensions, watchFolder, fullToFolder)
 
+		# Copy ALL files in Watch directory list to specified folder (i.e.: BakTo folder).
+		for watchFolder in self._watch_dirs:
+			if os.path.exists(watchFolder):
+				# Use the same fullToFolder from above if defined,
+				# otherwise, create a separate archive folder
+				if not fullToFolder:
+					fullToFolder = os.path.join(watchFolder, relativeToFolder)
+				self.baselogger.info("PreCopy ALL Residual files in Watch directory [{}] to [{}]".format(
+					watchFolder,
+					fullToFolder))
+				fextensions = ['*']
+				residual_files_found = self.copy_file_types_from_to(fextensions, watchFolder, fullToFolder)
+
+		if not residual_files_found:
+			self.baselogger.info("No Residual files found to Copy")
+
+	def copy_file_types_from_to(self, fextensions, fromFolder, toFolder):
+		found_file = False
 		for file_ext in fextensions:
 			file_pattern = '*' + file_ext
-			self.copy_pattern_from_to(file_pattern, watchFolder, fullToFolder)
+			found_file = self.copy_pattern_from_to(file_pattern, fromFolder, toFolder)
+
+		return found_file
 
 	def archive_expired_files(self, relativeToFolder):
+		# Archive all expired files in first listed file path,
+		# to specified folder (i.e.: logs/archive folder).
+		arch_files_found = False
+		fullToFolder = None
+		if self._watch_files and len(self._watch_files) > 0:
+			watchFolder = os.path.dirname(self._watch_files[0])
+			if os.path.exists(watchFolder):
+				fullToFolder = os.path.join(watchFolder, relativeToFolder)
+				self.baselogger.info("Archiving expired files from [{}] to [{}]".format(
+					watchFolder,
+					fullToFolder))
+				arch_files_found = self.archive_from_to(watchFolder, fullToFolder)
+
+		# Archive all expired files in each listed watch directory,
+		# to specified folder (i.e.: logs/archive folder).
+		for watchFolder in self._watch_dirs:
+			if os.path.exists(watchFolder):
+				# Use the same fullToFolder from above if defined,
+				# otherwise, create a separate archive folder
+				if not fullToFolder:
+					fullToFolder = os.path.join(watchFolder, relativeToFolder)
+				self.baselogger.info("Archiving expired files from Watch directory [{}] to [{}]".format(
+					watchFolder,
+					fullToFolder))
+				arch_files_found = self.archive_from_to(watchFolder, fullToFolder)
+
+		if not arch_files_found:
+			self.baselogger.info("No expired files found to Archive")
+
+	def archive_from_to(self, fromFolder, toFolder):
 		days_old = defaults.base.ArchiveAfterDaysOld
 		move_date = date.today() - timedelta(days=days_old)
 		move_date = time.mktime(move_date.timetuple())
 
-		# Archive all expired files to specified folder (i.e.: logs/archive folder).
-		if not self._watch_files or len(self._watch_files) < 1:
-			return
-		watchFolder = os.path.dirname(self._watch_files[0])
-		if not os.path.exists(watchFolder):
-			return
-		fullToFolder = os.path.join(watchFolder, relativeToFolder)
-
-		self.baselogger.info("Archiving expired files from [{}] to [{}]".format(
-			watchFolder,
-			fullToFolder))
-
 		arch_files_found = False
 
-		for file in os.listdir(watchFolder):
-			fullfile = os.path.join(watchFolder, file)
+		for file in os.listdir(fromFolder):
+			fullfile = os.path.join(fromFolder, file)
 			if os.path.isfile(fullfile):
 				filetime = os.stat(fullfile).st_mtime
 				if filetime < move_date:
@@ -216,7 +288,7 @@ class BaseTaskMaster():
 					fdate = datetime.fromtimestamp(filetime)
 					archpath = '{}{:02d}'.format(fdate.year, fdate.month)
 					archpath = os.path.join(archpath, '{:02d}'.format(fdate.day))
-					archpath = os.path.join(fullToFolder, archpath)
+					archpath = os.path.join(toFolder, archpath)
 					archfullfile = os.path.join(archpath, file)
 					if not os.path.exists(archpath):
 						os.makedirs(archpath)
@@ -228,8 +300,7 @@ class BaseTaskMaster():
 					shutil.copy2(fullfile, archfullfile)
 					os.remove(fullfile)
 
-		if not arch_files_found:
-			self.baselogger.info("No expired files found to Archive")
+		return arch_files_found
 
 	def getAvailableFileName(self, pfname):
 		if os.path.exists(pfname):
@@ -244,19 +315,23 @@ class BaseTaskMaster():
 			return pfname
 
 	def copy_pattern_from_to(self, fpattern, source_dir, dest_dir):
+		found_file = False
 		if not os.path.exists(dest_dir):
 			os.makedirs(dest_dir)
 
 		files = glob.iglob(os.path.join(source_dir, fpattern))
 		for file in files:
 			if os.path.isfile(file):
+				found_file = True
 				shutil.copy2(file, dest_dir)
 
-	def notify_all(self):
-		for notify_index, wfile in enumerate(self._watch_files):
-			self.notify_by_index(notify_index, True)
+		return found_file
 
-	def notify_by_index(self, notify_index, ignore_burst_mode=False):
+	def notify_all_files(self):
+		for notify_index, wfile in enumerate(self._watch_files):
+			self.notify_file_by_index(notify_index, True)
+
+	def notify_file_by_index(self, notify_index, ignore_burst_mode=False):
 		if notify_index < 0 or notify_index >= len(self._watch_files):
 			self.baselogger.error("Notify file index [{}] out of range!".format(notify_index))
 			return
@@ -271,7 +346,7 @@ class BaseTaskMaster():
 			self.notify_file(wfile)
 		wfile_state['prev_notify_dt'] = curr_notify_dt
 
-	def notify_by_index_burst_mode(self, notify_index):
+	def notify_file_by_index_burst_mode(self, notify_index):
 		curr_notify_dt = datetime.now()
 		wfile = self._watch_files[notify_index]
 		wfile_state = self._watch_files_state[notify_index]
@@ -583,10 +658,16 @@ class BaseSubtask():
 		parser = argparse.ArgumentParser(description=psDescription)
 
 		parser.add_argument(
-			'-w', '--watch-file-list',
-			required=True,
+			'-w', '-wf', '--watch-file-list',
+			# required=True, # At least -wf or -wd required
 			dest='watch_files',
-			help='Delimited list of file paths+names to watch and upload')
+			help='Delimited list of file paths+names to watch and upload on notify')
+
+		parser.add_argument(
+			'-wd', '--watch-dir-list',
+			# required=True, # At least -wf or -wd required
+			dest='watch_dirs',
+			help='Delimited list of directories to watch all of the files inside and upload on notify')
 
 		parser.add_argument(
 			'-i', '--interval-secs',
@@ -599,7 +680,7 @@ class BaseSubtask():
 			'-bakto', '--bak-to-folder',
 			dest='bak_to_folder',
 			default=defaults.base.BakToFolder,
-			help='Folder where to copy notified files to')
+			help='Folder where to stage a copy of notified files to')
 
 		parser.add_argument(
 			'-noconsole', '--noconsole',
@@ -655,7 +736,11 @@ def setup_logging(cname, lfname, LogToConsole=True):
 
 def spawn_subtask():
 	parser = BaseSubtask.parse_args_init(None, BaseSubtask._Description)
-	subtask = BaseSubtask(parser.parse_args())
+	pargs = parser.parse_args()
+	if not pargs.watch_files and not pargs.watch_dirs:
+		parser.error("Either -wf (watch_files) or -wd (watch_dirs) is required.")
+		return
+	subtask = BaseSubtask(pargs)
 	subtask.baselogger.info("***** HELLO!: [{}] *****".format(subtask._Description))
 	subtask.start()
 

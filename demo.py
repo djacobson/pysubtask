@@ -32,8 +32,9 @@ def get_commands(master):
 				master.reset()
 
 			elif kbd_input == 'a':
-				# Notify subtask of all files
-				master.notify_all()
+				# Notify subtask of all files and directories
+				# having ready data
+				master.notify_all_files()
 
 			elif kbd_input == 'c':
 				# Check for pending data from ending on a Burst
@@ -41,7 +42,7 @@ def get_commands(master):
 
 			elif kbd_input.isdigit():
 				# Notify subtask of specific file in list (by index num)
-				master.notify_by_index(int(kbd_input))
+				master.notify_file_by_index(int(kbd_input))
 
 			else:
 				print('ERROR: [{}] Unknown cmd!'.format(kbd_input))
@@ -51,9 +52,10 @@ def get_commands(master):
 
 def run_app():
 
-	watchfiles = [
+	watchfilesdirs = [
 		{'file': 'logs/test1.csv', 'burstmode': True},
-		{'file': 'logs/test1.mrk', 'burstmode': False}
+		{'file': 'logs/test1.mrk', 'burstmode': False},
+		{'dir': 'logs/watch_all_in_here'}
 	]
 
 	master = None
@@ -61,13 +63,13 @@ def run_app():
 
 		# Use S/FTP
 		from pysubtask.ftp import FTPTaskMaster
-		master = FTPTaskMaster(watchfiles, config.ftp, LogToConsole=True)
+		master = FTPTaskMaster(watchfilesdirs, config.ftp, LogToConsole=True)
 
 	elif config.dropbox.UseDropbox:
 
 		# Use DropBox
 		from pysubtask.dropbox import DropboxTaskMaster
-		master = DropboxTaskMaster(watchfiles, config.dropbox, LogToConsole=True)
+		master = DropboxTaskMaster(watchfilesdirs, config.dropbox, LogToConsole=True)
 
 	else:
 		return
