@@ -47,6 +47,10 @@ class DropboxTaskMaster(BaseTaskMaster):
 			LogToConsole)
 
 		# Add specific args for Dropbox Client to SubProc args
+		self.init_dropbox_args()
+
+	def init_dropbox_args(self):
+		# Add specific args for Dropbox Client to SubProc args
 		self._subtaskArgs += [
 			'-dtoken', self.config.AccessToken,
 			'-bakto', defaults.dropbox.BakToFolder

@@ -40,6 +40,10 @@ class FTPTaskMaster(BaseTaskMaster):
 			LogToConsole)
 
 		# Add specific args for FTP Client to SubProc args
+		self.init_ftp_args()
+
+	def init_ftp_args(self):
+		# Add specific args for FTP Client to SubProc args
 		if self.config.UseSFTP:
 			hostPath = self.config.HostSFTPPath
 		else:

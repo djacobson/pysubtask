@@ -51,17 +51,17 @@ class BaseTaskMaster():
 			LogToConsole)
 
 		# Create Watch files and/or dirs list
-		self.init_files(WatchFilesDirs)
+		self.init_base_files(WatchFilesDirs)
 		if len(self._watch_files) < 1 and len(self._watch_dirs) < 1:
 			self.baselogger.error("No Watch files or dirs specified!")
 			return
 
 		# Convert WatchFiles list to arguments for subtask
-		self.init_args(SubtaskModuleName, LogToConsole)
+		self.init_base_args(SubtaskModuleName, LogToConsole)
 
 		self._subtask = None
 
-	def init_files(self, WatchFilesDirs):
+	def init_base_files(self, WatchFilesDirs):
 		# Create WatchFiles list
 		self._watch_files = []
 		self._watch_files_state = []
@@ -95,7 +95,7 @@ class BaseTaskMaster():
 			else:
 				self.baselogger.error("Unknown Watch list key [{}]".format(wfile))
 
-	def init_args(
+	def init_base_args(
 		self,
 		SubtaskModuleName=__name__,
 		LogToConsole=True):
