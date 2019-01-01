@@ -41,7 +41,7 @@ def get_commands(master):
 				master.check_pending_notifications()
 
 			elif kbd_input.isdigit():
-				# Notify subtask of specific file in list (by index num)
+				# Notify subtask of specific file in list (by index *file* num)
 				master.notify_file_by_index(int(kbd_input))
 
 			else:

@@ -135,7 +135,7 @@ class BaseTaskMaster():
 			# First, prearchive expired files (all files types in log dir)
 			self.archive_expired_files(prearchive_expired_files_to_folder)
 		if precopy_files_to_folder:
-			# Second, precopy old / residual data files types (for preuplaod, etc.)
+			# Second, precopy old / residual data files types (for preupload, etc.)
 			self.copy_residual_files(precopy_files_to_folder)
 		self.baselogger.info('START!')
 		self.spawn_subtask()
@@ -341,9 +341,9 @@ class BaseTaskMaster():
 
 		curr_notify_dt = datetime.now()
 		if not ignore_burst_mode and wfile_state['burst_mode']:
-			wfile_state['pending_data_dt'] = self.notify_by_index_burst_mode(notify_index)
+			wfile_state['pending_data_dt'] = self.notify_file_by_index_burst_mode(notify_index)
 		else:
-			self.notify_file(wfile)
+			notify_file(wfile)
 		wfile_state['prev_notify_dt'] = curr_notify_dt
 
 	def notify_file_by_index_burst_mode(self, notify_index):
@@ -375,7 +375,7 @@ class BaseTaskMaster():
 					# Y: Burst buffer expired. Time to release it / notify.
 					self.baselogger.info("Burst (previous) expired. Notifying! [{}]".format(
 						burst_expire_milli))
-					self.notify_file(wfile)
+					notify_file(wfile)
 					burst_mode['start_dt'] = None
 					burst_mode['count'] = 0
 				else:
@@ -391,7 +391,7 @@ class BaseTaskMaster():
 						# N: Release it / notify it.
 						self.baselogger.info("Burst (existing) ended. Notifying! [{}] elapsed.".format(
 							notify_delta_milli))
-						self.notify_file(wfile)
+						notify_file(wfile)
 						burst_mode['start_dt'] = None
 						burst_mode['count'] = 0
 			else:
@@ -421,17 +421,13 @@ class BaseTaskMaster():
 					# N: Data coming in slow enough... just release it / notify immediately.
 					self.baselogger.info("Regular rate (not a Burst). Notifying! [{}]".format(
 						notify_delta_milli))
-					self.notify_file(wfile)
+					notify_file(wfile)
 					burst_mode['count'] = 0
 		else:
 			self.baselogger.info("Initial notify (Burst mode)")
-			self.notify_file(wfile)
+			notify_file(wfile)
 
 		return return_pending_dt
-
-	def notify_file(self, wfile):
-		nfile = '{}.notify'.format(wfile)
-		self.touch(nfile)
 
 	def check_pending_notifications(self):
 		# Check for pending data from ending on a Burst
@@ -442,7 +438,7 @@ class BaseTaskMaster():
 			if pending_data_dt:
 				if pending_data_dt <= now_dt:
 					self.baselogger.info('Pending AND expired data detected. Notifying!')
-					self.notify_file(wfile)
+					notify_file(wfile)
 					wfile_state['pending_data_dt'] = None  # Clear pending flag
 				else:
 					self.baselogger.info('Pending data detected. *BUT*, has NOT expired yet. [{}] secs to go.'.format(
@@ -450,14 +446,6 @@ class BaseTaskMaster():
 			else:
 				# self.baselogger.info('No pending data to release / notify.')
 				pass
-
-	def touch(self, fname, mode=0o666, dir_fd=None, **kwargs):
-		# https://stackoverflow.com/questions/1158076/implement-touch-using-python
-		flags = os.O_CREAT | os.O_APPEND
-		with os.fdopen(os.open(fname, flags=flags, mode=mode, dir_fd=dir_fd)) as f:
-			os.utime(
-				f.fileno() if os.utime in os.supports_fd else fname,
-				dir_fd=None if os.supports_fd else dir_fd, **kwargs)
 
 	def encode(self, key, clear):
 		# https://stackoverflow.com/questions/2490334/simple-way-to-encode-a-string-according-to-a-password
@@ -487,15 +475,8 @@ class BaseSubtask():
 			LogFileName,
 			not args.noconsole)
 
-		self._TimerIntervalSecs = args.interval_secs  # secs
-
-		watch_files = args.watch_files[1:-1]  # dequote
-		watch_files_list = watch_files.split(',')
-		self._watch_files = watch_files_list
-		self._notify_files = None
-		self._bakToFolder = args.bak_to_folder
-		self._bakToFullPath = None
-		self.init_files()
+		self.init_subtask_args(args)
+		self.init_subtask_files()
 
 		self._Timer = None
 		self._SubtaskStopNow = False
@@ -514,10 +495,25 @@ class BaseSubtask():
 	def __del__(self):
 		self.stop()
 
-	def init_files(self):
+	def init_subtask_args(self, args):
+		self._TimerIntervalSecs = args.interval_secs  # secs
+
+		watch_files = args.watch_files[1:-1]  # dequote
+		watch_files_list = watch_files.split(',')
+		self._watch_files = watch_files_list
+
+		watch_dirs = args.watch_dirs[1:-1]  # dequote
+		watch_dirs_list = watch_dirs.split(',')
+		self._watch_dirs = watch_dirs_list
+
+		self._bakToFolder = args.bak_to_folder
+		self._bakToFullPath = None
+
+	def init_subtask_files(self):
 		# Derive notify files list
 		# remove any residuals
 		self._notify_files = []
+		self._notify_dir_files = []
 		cached_notify_stamp = 0
 		for wfile in self._watch_files:
 			nfile = '{}.notify'.format(wfile)
@@ -554,19 +550,71 @@ class BaseSubtask():
 		if self._SubtaskStopNow:
 			return
 
+		self._process_check_static_file_list()
+		if self._SubtaskStopNow:
+			return
+		self._process_check_dynamic_dir_list()
+
+	def _process_check_static_file_list(self):
+		# Check File list for files ready to be notified
 		i = 0
 		for (nfile, cached_notify_stamp) in self._notify_files:
 			if self._SubtaskStopNow:
 				return
-			if os.path.exists(nfile):
-				stamp = os.stat(nfile).st_mtime
-				if stamp != cached_notify_stamp:
-					# Replace notify file tuple stamp
-					self._notify_files[i] = (nfile, stamp)
-					# File has changed, so do something...
-					wfile = nfile.strip('.notify')
-					self._process_notify(wfile)
+			wfile = nfile.strip('.notify')
+			self._notify_files[i] = self._process_check_file(
+				wfile,
+				nfile,
+				self._notify_files[i])
 			i += 1
+
+	def _process_check_dynamic_dir_list(self):
+		# Dynamically check Dir list for dirs with files ready to be notified
+		for watchDir in self._watch_dirs:
+			if self._SubtaskStopNow:
+				return
+			if os.path.exists(watchDir):
+				for watchDirFile in os.listdir(watchDir):
+					if watchDirFile.endswith(".notify"):
+						pass
+					else:
+						# Check to see if each dir file has a .notify list entry,
+						# if not, add one and set it for ready to be notified
+						ndirfile = os.path.join(watchDir, watchDirFile)
+						ndirfile_already_cached = False
+						i = 0
+						for (cachedndirfile, cached_notify_stamp) in self._notify_dir_files:
+							if ndirfile == cachedndirfile:
+								ndirfile_already_cached = True
+								break
+							i += 1
+
+						if not ndirfile_already_cached:
+							# New file to start monitoring
+							self._notify_dir_files.append((ndirfile, 0))
+							notify_file(ndirfile)
+							self._process_notify(ndirfile)
+						else:
+							# Existing file already beiing monitored
+							ndirnotifyfile = '{}.notify'.format(ndirfile)
+							self._notify_dir_files[i] = self._process_check_file(
+								ndirfile,
+								ndirnotifyfile,
+								self._notify_dir_files[i])
+
+	def _process_check_file(self, datafile, datanotifyfile, updatenotifylist):
+		cachedndirfile = updatenotifylist[0]
+		cached_notify_stamp = updatenotifylist[1]
+
+		if os.path.exists(datanotifyfile):
+			stamp = os.stat(datanotifyfile).st_mtime
+			if stamp != cached_notify_stamp:
+				# Replace notify file tuple stamp
+				cached_notify_stamp = stamp
+				# File has changed, so do something...
+				self._process_notify(datafile)
+
+		return (cachedndirfile, cached_notify_stamp)
 
 	def _process_interval(self):
 		if self._SubtaskStopNow:
@@ -697,6 +745,20 @@ class BaseSubtask():
 
 def timedelta_milliseconds(td):
 	return td.days * 86400000 + td.seconds * 1000 + td.microseconds / 1000
+
+
+def notify_file(wfile):
+	nfile = '{}.notify'.format(wfile)
+	touch(nfile)
+
+
+def touch(fname, mode=0o666, dir_fd=None, **kwargs):
+	# https://stackoverflow.com/questions/1158076/implement-touch-using-python
+	flags = os.O_CREAT | os.O_APPEND
+	with os.fdopen(os.open(fname, flags=flags, mode=mode, dir_fd=dir_fd)) as f:
+		os.utime(
+			f.fileno() if os.utime in os.supports_fd else fname,
+			dir_fd=None if os.supports_fd else dir_fd, **kwargs)
 
 
 def setup_logging(cname, lfname, LogToConsole=True):
