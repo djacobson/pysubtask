@@ -54,7 +54,7 @@ def run_app():
 
 	watchfilesdirs = [
 		{'file': 'logs/test1.csv', 'burstmode': True},
-		{'file': 'logs/test1.mrk', 'burstmode': False},
+		{'file': 'logs/test1.mrk'},  # burstmode = False
 		{'dir': 'logs/watch_all_in_here'}
 	]
 

@@ -77,7 +77,7 @@ class BaseTaskMaster():
 					'burst_mode': None
 				}
 
-				if wfile['burstmode']:
+				if 'burstmode' in wfile and wfile['burstmode']:
 					wfile_burst_mode = {
 						'start_dt': None,
 						'count': 0,
