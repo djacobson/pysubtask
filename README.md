@@ -33,16 +33,19 @@ Enter cmd:
 'r' = Reset the subtask (complete shutdown and restart of the subtask process)
 ```
 
-Enter one or more of the _**Notify**_ commands (a, 0, 1, c) repeatedly, with varying frequency to watch the notifications and **burst mode** in action, simulating new data being written and "notified" to the registered data file(s), and actually being "pushed" to your specified S/FTP host. Also observe the log output in the ``logs`` folder, as well as the test data files. (See **About** below for a more detailed explanation)
+Enter one or more of the demo _**Notify**_ commands ``(a, 0, 1, c)`` repeatedly, with varying frequency to watch the notifications and **burst mode** in action, simulating new data being written and "notified" to the registered data file(s), and actually being "pushed" to your specified S/FTP host. Also, copy a random file into the ``logs/watch_all_in_here`` folder and observe it automatically uploaded, and update its auto-gen'd ``.notify`` file and observe it being uploaded (an example of notifying a file externally from the ``demo.py`` app.
 
-Experiment with your own data file(s) by editing the following initialization code in ``demo.py``:
+Data files to monitor and upload-on-notify are declared either by a static file name(s) list, or with the name of a directory(ies) to watch for files to appear inside dynamically, or both. See the following initialization code in ``demo.py``, and experiment by adding your own data file(s):
 
 ```
-watchfiles = [
+watchfilesdirs = [
+	{'file': 'logs/test1.mrk'},  # Regular, no burstmode
 	{'file': 'logs/test1.csv', 'burstmode': True},
-	{'file': 'logs/test1.mrk', 'burstmode': False}
+	{'dir': 'logs/watch_all_in_here'}
 ]
 ```
+
+Also, observe the log output in the ``logs`` folder, as well as the test data files. (See **About** below for a more detailed explanation)
 
 ## About
 

@@ -53,8 +53,8 @@ def get_commands(master):
 def run_app():
 
 	watchfilesdirs = [
+		{'file': 'logs/test1.mrk'},  # Regular, no burstmode
 		{'file': 'logs/test1.csv', 'burstmode': True},
-		{'file': 'logs/test1.mrk'},  # burstmode = False
 		{'dir': 'logs/watch_all_in_here'}
 	]
 
