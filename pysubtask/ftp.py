@@ -5,7 +5,6 @@
 # https://github.com/djacobson/pysubtask
 
 import os
-import sys
 import socket
 
 from . import defaults_config as defaults
