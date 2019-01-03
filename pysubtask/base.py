@@ -162,7 +162,8 @@ class BaseTaskMaster():
 			self.baselogger.info("STOP!: BaseTaskMaster attempting to stop BaseSubtask [{}]...".format(
 				self._subtask.pid))
 			if ON_WINDOWS:
-				self._subtask.send_signal(signal.CTRL_BREAK_EVENT)
+				# self._subtask.send_signal(signal.CTRL_BREAK_EVENT)
+				os.popen('TASKKILL /PID ' + str(self._subtask.pid) + ' /F')
 			else:
 				self._subtask.terminate()
 			self._subtask.wait()
