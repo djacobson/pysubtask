@@ -774,7 +774,8 @@ def setup_logging(cname, lfname, LogToConsole=True):
 	_logger.setLevel(logging.DEBUG)
 
 	# create formatter
-	logFormat = '%(asctime)s.%(msecs)03d [%(module)s.%(name)s]: %(levelname)s: %(message)s'
+	pid = os.getpid()
+	logFormat = '%(asctime)s.%(msecs)03d [%(module)s.%(name)s.{}]: %(levelname)s: %(message)s'.format(pid)
 	formatter = logging.Formatter(logFormat, datefmt="%Y-%m-%d %H:%M:%S")
 
 	if LogToConsole:
