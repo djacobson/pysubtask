@@ -59,17 +59,22 @@ def run_app():
 	]
 
 	master = None
+
+	# Use line below to dynamically change the heartbeat
+	# file name to something other than default = hostname
+	# config.base.HeartbeatName = 'SomethingElse'
+
 	if config.ftp.UseFTP:
 
 		# Use S/FTP
 		from pysubtask.ftp import FTPTaskMaster
-		master = FTPTaskMaster(watchfilesdirs, config.ftp, LogToConsole=True)
+		master = FTPTaskMaster(watchfilesdirs, config, LogToConsole=True)
 
 	elif config.dropbox.UseDropbox:
 
 		# Use DropBox
 		from pysubtask.dropbox import DropboxTaskMaster
-		master = DropboxTaskMaster(watchfilesdirs, config.dropbox, LogToConsole=True)
+		master = DropboxTaskMaster(watchfilesdirs, config, LogToConsole=True)
 
 	else:
 		return

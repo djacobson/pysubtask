@@ -20,6 +20,10 @@ from . import defaults_config as defaults
 from .base import BaseTaskMaster, BaseSubtask
 
 
+##################
+# Dropbox Master #
+##################
+
 class DropboxTaskMaster(BaseTaskMaster):
 
 	dropboxlogger = None
@@ -32,11 +36,11 @@ class DropboxTaskMaster(BaseTaskMaster):
 		LogToConsole=True):
 
 		# Fill in non-specified config items with defaults
-		self.config = self.combine(pconfig, defaults.dropbox)
+		self.dropbox_config = self.combine(pconfig.dropbox, defaults.dropbox)
 
 		super().__init__(
 			WatchFiles,
-			self.config,
+			pconfig.base,
 			__name__,
 			LogFileName,
 			LogToConsole)
@@ -52,19 +56,19 @@ class DropboxTaskMaster(BaseTaskMaster):
 	def init_dropbox_args(self):
 		# Add specific args for Dropbox Client to SubProc args
 		self._subtaskArgs += [
-			'-dtoken', self.config.AccessToken,
+			'-dtoken', self.dropbox_config.AccessToken,
 			'-bakto', defaults.dropbox.BakToFolder
 		]
 		# Only add these args if they differ from default config
-		if self.config.DeadTimeMilli != defaults.dropbox.DeadTimeMilli:
-			self._subtaskArgs += ['-x', str(self.config.DeadTimeMilli)]
+		if self.dropbox_config.DeadTimeMilli != defaults.dropbox.DeadTimeMilli:
+			self._subtaskArgs += ['-x', str(self.dropbox_config.DeadTimeMilli)]
 
 	def start(self, precleanup_old_files=False):
 		if precleanup_old_files:
 			# Pre-archive old data & pre-copy and upload previous residual data, then Start
 			super().start(
 				prearchive_expired_files_to_folder=defaults.base.ArchiveToFolder,
-				precopy_files_to_folder=self.config.BakToFolder)
+				precopy_files_to_folder=self.dropbox_config.BakToFolder)
 		else:
 			# Just Start
 			super().start()
@@ -72,6 +76,10 @@ class DropboxTaskMaster(BaseTaskMaster):
 	def stop(self):
 		super().stop(defaults.dropbox.SubtaskDescription)
 
+
+###################
+# Dropbox Subtask #
+###################
 
 class DropboxSubtask(BaseSubtask):
 
@@ -139,6 +147,16 @@ class DropboxSubtask(BaseSubtask):
 					if self._SubtaskStopNow:
 						return
 					self.upload_file(psWatchFile)
+
+	def process_heartbeat(self, hb_filename):
+		if not self.Enabled:
+			return
+
+		# Subtask Heartbeat due!
+		if not self.is_connected():
+			self.connect()
+
+		self.upload_file(hb_filename, False)  # heartbeat does not need retry or logging
 
 	def connect(self, uploadAllFilesFirst=False):
 		# Cycle infinitely until connected
@@ -222,7 +240,7 @@ class DropboxSubtask(BaseSubtask):
 			self.upload_all_in_dir(self._bakToFullPath)
 		self.disconnect()
 
-	def upload_file(self, upFile):
+	def upload_file(self, upFile, logSuccess=True):
 		# Check if upFile exists first
 		if not os.path.exists(upFile):
 			self.dropboxlogger.error("Upload file [{}] does not exist!".format(upFile))
@@ -241,7 +259,8 @@ class DropboxSubtask(BaseSubtask):
 				self.upload_file_dropbox(
 					upFile,
 					"/" + upname,
-					True)
+					True,
+					logSuccess)
 			except Exception as e:
 				self.dropboxlogger.error("Upload Data File: [{}]".format(e))
 				self.disconnect()
@@ -250,7 +269,7 @@ class DropboxSubtask(BaseSubtask):
 				# self.dropboxlogger.info("Upload Data File: [{}]".format(upname))
 				return True
 
-	def upload_file_dropbox(self, file_from, file_to, overwrite=False):
+	def upload_file_dropbox(self, file_from, file_to, overwrite=False, logSuccess=True):
 		"""upload a file to Dropbox using API v2
 		"""
 		# https://github.com/dropbox/dropbox-sdk-python/blob/master/example/updown.py
@@ -273,8 +292,9 @@ class DropboxSubtask(BaseSubtask):
 				self.dropboxlogger.error('Dropbox API error:', err)
 				return False
 
-		self.dropboxlogger.info("Uploaded as [{}]".format(
-			res.name.encode('utf8')))
+		if logSuccess:
+			self.dropboxlogger.info("Uploaded as [{}]".format(
+				res.name.encode('utf8')))
 		return True
 
 	def upload_all_in_dir(self, upDir):

@@ -15,6 +15,7 @@ from datetime import datetime, date, timedelta
 import time
 import base64
 import logging
+import socket
 
 from . import defaults_config as defaults
 from .InfiniteTimer import InfiniteTimer
@@ -29,6 +30,12 @@ else:
 	_SIGNAL_STOP_subtask = signal.SIGTERM
 _SIGNAL_STOP_subtask_INTERACTIVELY = signal.SIGINT  # CTRL+C
 
+_HeartbeatFudgeFactorSecs = 10  # secs to add to expect val in hb file, for server to allow for transfer
+
+
+###################
+# Base TaskMaster #
+###################
 
 class BaseTaskMaster():
 
@@ -43,7 +50,7 @@ class BaseTaskMaster():
 		LogToConsole=True):
 
 		# Fill in non-specified config items with defaults
-		self.config = self.combine(pconfig, defaults.base)
+		self.base_config = self.combine(pconfig, defaults.base)
 
 		self.baselogger = self.setup_logging(
 			__class__.__name__,
@@ -60,6 +67,9 @@ class BaseTaskMaster():
 		self.init_base_args(SubtaskModuleName, LogToConsole)
 
 		self._subtask = None
+
+	def setup_logging(self, cname, lfname, LogToConsole=True):
+		return setup_logging(cname, lfname, LogToConsole)
 
 	def init_base_files(self, WatchFilesDirs):
 		# Create WatchFiles list
@@ -119,8 +129,12 @@ class BaseTaskMaster():
 		if not LogToConsole:
 			self._subtaskArgs += ['-noconsole']
 		# Only add these args if they differ from default config
-		if self.config.TimerIntervalSecs != defaults.base.TimerIntervalSecs:
-			self._subtaskArgs += ['-i', str(self.config.TimerIntervalSecs)]
+		if self.base_config.TimerIntervalSecs != defaults.base.TimerIntervalSecs:
+			self._subtaskArgs += ['-i', str(self.base_config.TimerIntervalSecs)]
+		if self.base_config.HeartbeatIntervalSecs != defaults.base.HeartbeatIntervalSecs:
+			self._subtaskArgs += ['-hb', str(self.base_config.HeartbeatIntervalSecs)]
+		if self.base_config.HeartbeatName != defaults.base.HeartbeatName:
+			self._subtaskArgs += ['-hbname', str(self.base_config.HeartbeatName)]
 
 	def combine(self, master_dict, add_this_dict):
 		new_dict = master_dict
@@ -178,19 +192,31 @@ class BaseTaskMaster():
 				os.remove(nfile)
 
 	def cleanup_all_notify_files(self):
+		hbFolder = None
+
 		if self._watch_files and len(self._watch_files) > 0:
 			watchFolder = os.path.dirname(self._watch_files[0])
 			if os.path.exists(watchFolder):
 				self.cleanup_all_notify_files_in_folder(watchFolder)
+				hbFolder = watchFolder
 
 		for watchFolder in self._watch_dirs:
 			if os.path.exists(watchFolder):
 				self.cleanup_all_notify_files_in_folder(watchFolder)
+				if not hbFolder:
+					hbFolder = watchFolder
+
+		# Cleanup heartbeat files
+		if hbFolder:
+			self.cleanup_files_with_ext_in_folder('.heartbeat', hbFolder)
 
 	def cleanup_all_notify_files_in_folder(self, inFolder):
+		self.cleanup_files_with_ext_in_folder('.notify', inFolder)
+
+	def cleanup_files_with_ext_in_folder(self, fext, inFolder):
 		allFiles = [f for f in os.listdir(inFolder) if os.path.isfile(os.path.join(inFolder, f))]
 		for watchNotifyFile in allFiles:
-			if watchNotifyFile.endswith('.notify'):
+			if watchNotifyFile.endswith(fext):
 				nfile = os.path.join(inFolder, watchNotifyFile)
 				self.baselogger.info("Cleaning up [{}]".format(nfile))
 				os.remove(nfile)
@@ -448,6 +474,10 @@ class BaseTaskMaster():
 				# self.baselogger.info('No pending data to release / notify.')
 				pass
 
+	##
+	# Following methods primarily used by extensions of BaseTaskMaster
+	##
+
 	def encode(self, key, clear):
 		# https://stackoverflow.com/questions/2490334/simple-way-to-encode-a-string-according-to-a-password
 		enc = []
@@ -457,9 +487,10 @@ class BaseTaskMaster():
 			enc.append(enc_c)
 		return base64.urlsafe_b64encode("".join(enc).encode()).decode()
 
-	def setup_logging(self, cname, lfname, LogToConsole=True):
-		return setup_logging(cname, lfname, LogToConsole)
 
+################
+# Base Subtask #
+################
 
 class BaseSubtask():
 
@@ -484,6 +515,7 @@ class BaseSubtask():
 		self._IgnoreTimer = False
 
 		self._last_notify_dt = datetime.now()  # Start of app is first notify dt
+		self._last_heartbeat_dt = datetime.now()
 
 		signal.signal(
 			_SIGNAL_STOP_subtask,
@@ -496,8 +528,63 @@ class BaseSubtask():
 	def __del__(self):
 		self.stop()
 
+	def parse_args_init(self, psDescription):
+		parser = argparse.ArgumentParser(description=psDescription)
+
+		parser.add_argument(
+			'-w', '-wf', '--watch-file-list',
+			# required=True, # At least -wf or -wd required
+			dest='watch_files',
+			help='Delimited list of file paths+names to watch and upload on notify')
+
+		parser.add_argument(
+			'-wd', '--watch-dir-list',
+			# required=True, # At least -wf or -wd required
+			dest='watch_dirs',
+			help='Delimited list of directories to watch all of the files inside and upload on notify')
+
+		parser.add_argument(
+			'-i', '--interval-secs',
+			dest='interval_secs',
+			default=defaults.base.TimerIntervalSecs,
+			type=int,
+			help='Timer interval in seconds')
+
+		parser.add_argument(
+			'-bakto', '--bak-to-folder',
+			dest='bak_to_folder',
+			default=defaults.base.BakToFolder,
+			help='Folder where to stage a copy of notified files to')
+
+		parser.add_argument(
+			'-hb', '--heartbeat-interval-secs',
+			dest='hb_interval_secs',
+			default=defaults.base.HeartbeatIntervalSecs,
+			type=int,
+			help='Heartbeat interval in seconds')
+
+		parser.add_argument(
+			'-hbname', '--heartbeat-name',
+			dest='hb_name',
+			default=defaults.base.HeartbeatName,
+			type=str,
+			help='Heartbeat file base name')
+
+		parser.add_argument(
+			'-noconsole', '--noconsole',
+			dest='noconsole',
+			action='store_true',
+			default=False,
+			help='If specified, do not log to the console')
+
+		return parser
+
+	def setup_logging(self, cname, lfname, LogToConsole=True):
+		return setup_logging(cname, lfname, LogToConsole)
+
 	def init_subtask_args(self, args):
 		self._TimerIntervalSecs = args.interval_secs  # secs
+		self._HeartbeatIntervalSecs = args.hb_interval_secs
 
 		watch_files = args.watch_files[1:-1]  # dequote
 		watch_files_list = watch_files.split(',')
@@ -510,7 +597,14 @@ class BaseSubtask():
 		self._bakToFolder = args.bak_to_folder
 		self._bakToFullPath = None
 
+		if not args.hb_name:
+			self.hb_basename = socket.gethostname()
+		else:
+			self.hb_basename = args.hb_name
+
 	def init_subtask_files(self):
+		hb_path = None
+
 		# Derive notify files list
 		# remove any residuals
 		self._notify_files = []
@@ -521,6 +615,9 @@ class BaseSubtask():
 			self._notify_files.append((nfile, cached_notify_stamp))
 			if os.path.exists(nfile):
 				os.remove(nfile)
+			# hb path is first watchfile folder
+			if not hb_path:
+				hb_path = os.path.split(nfile)[0]
 
 		# Create bakTo folder if it does not exist
 		self._bakToFullPath = self._bakToFolder
@@ -534,6 +631,21 @@ class BaseSubtask():
 			if not os.path.exists(bakFilePath):
 				os.makedirs(bakFilePath)
 			self._bakToFullPath = bakFilePath
+
+		# If hb path not derived from first watchfile folder,
+		# default to upload folder (parent of bakTo folder)
+		if not hb_path:
+			hb_path = os.path.abspath(os.path.join(self._bakToFullPath, os.pardir))
+
+		# Pre-generate Heartbeat file (touched each hb interval)
+		# Store hb interval val in var and in hb file (for separate apps like remote servers to read)
+		hb_filename = '{}.heartbeat'.format(self.hb_basename)
+		self.hb_file = os.path.join(hb_path, hb_filename)
+
+		if self._HeartbeatIntervalSecs > 0:
+			self.baselogger.info("Heartbeat: File [{}] every [{}] secs.".format(self.hb_file, self._HeartbeatIntervalSecs))
+			with open(self.hb_file, 'w') as out_hbf:
+				out_hbf.write('{}\n'.format(self._HeartbeatIntervalSecs + _HeartbeatFudgeFactorSecs))
 
 	def start(self):
 		self.baselogger.info("START! Polling every [{}] secs".format(self._TimerIntervalSecs))
@@ -555,6 +667,9 @@ class BaseSubtask():
 		if self._SubtaskStopNow:
 			return
 		self._process_check_dynamic_dir_list()
+
+		if self._HeartbeatIntervalSecs > 0:
+			self._process_heartbeat()
 
 	def _process_check_static_file_list(self):
 		# Check File list for files ready to be notified
@@ -596,7 +711,7 @@ class BaseSubtask():
 							notify_file(ndirfile)
 							self._process_notify(ndirfile)
 						else:
-							# Existing file already beiing monitored
+							# Existing file already being monitored
 							ndirnotifyfile = '{}.notify'.format(ndirfile)
 							self._notify_dir_files[i] = self._process_check_file(
 								ndirfile,
@@ -649,12 +764,18 @@ class BaseSubtask():
 		# Override
 		self.baselogger.info("Subtask Notified!: File [{}] changed.".format(psWatchFile))
 
-	def dead_time(self):
-		# Return millisecs since last notification
-		if not self._last_notify_dt:
-			return None
-		else:
-			return timedelta_milliseconds(datetime.now() - self._last_notify_dt)
+	def _process_heartbeat(self):
+		if self._SubtaskStopNow:
+			return
+		if self.heartbeat_time() > self._HeartbeatIntervalSecs * 1000:
+			# Heartbeat due!
+			self._last_heartbeat_dt = datetime.now()  # reset hb time
+			touch(self.hb_file)
+			self.process_heartbeat(self.hb_file)
+
+	def process_heartbeat(self, hb_filename):
+		# Override
+		self.baselogger.info("Subtask Heartbeat: do something every Heartbeat interval.")
 
 	def stop(self):
 		self._SubtaskStopNow = True
@@ -662,21 +783,6 @@ class BaseSubtask():
 			self.baselogger.info("STOP!")
 			self._Timer.stop()
 			self._Timer = None
-
-	def sleep(self, seconds):
-		# Politely sleep
-		if self._SubtaskStopNow:
-			return
-
-		if seconds > 1:
-			for i in range(seconds):
-				if self._SubtaskStopNow:
-					return
-				time.sleep(1)
-		else:
-			if self._SubtaskStopNow:
-				return
-			time.sleep(seconds)
 
 	def copy_file_to_dir(self, fromFile, toDir):
 		if not os.path.exists(fromFile):
@@ -693,6 +799,42 @@ class BaseSubtask():
 
 		return toFileName
 
+	def heartbeat_time(self):
+		# Return millisecs since last heartbeat
+		if not self._last_heartbeat_dt or self._HeartbeatIntervalSecs <= 0:
+			return None
+		else:
+			return timedelta_milliseconds(datetime.now() - self._last_heartbeat_dt)
+
+	##
+	# Following methods primarily used by extensions of BaseSubtask
+	##
+
+	def dead_time(self):
+		# Return millisecs since last notification
+		# or last heartbeat, whichever is most recent
+		dtime = self._last_notify_dt
+		if self._last_heartbeat_dt:
+			if dtime < self._last_heartbeat_dt:
+				dtime = self._last_heartbeat_dt
+
+		return timedelta_milliseconds(datetime.now() - dtime)
+
+	def sleep(self, seconds):
+		# Politely sleep
+		if self._SubtaskStopNow:
+			return
+
+		if seconds > 1:
+			for i in range(seconds):
+				if self._SubtaskStopNow:
+					return
+				time.sleep(1)
+		else:
+			if self._SubtaskStopNow:
+				return
+			time.sleep(seconds)
+
 	def decode(self, key, enc):
 		# https://stackoverflow.com/questions/2490334/simple-way-to-encode-a-string-according-to-a-password
 		dec = []
@@ -703,46 +845,10 @@ class BaseSubtask():
 			dec.append(dec_c)
 		return "".join(dec)
 
-	def parse_args_init(self, psDescription):
-		parser = argparse.ArgumentParser(description=psDescription)
 
-		parser.add_argument(
-			'-w', '-wf', '--watch-file-list',
-			# required=True, # At least -wf or -wd required
-			dest='watch_files',
-			help='Delimited list of file paths+names to watch and upload on notify')
-
-		parser.add_argument(
-			'-wd', '--watch-dir-list',
-			# required=True, # At least -wf or -wd required
-			dest='watch_dirs',
-			help='Delimited list of directories to watch all of the files inside and upload on notify')
-
-		parser.add_argument(
-			'-i', '--interval-secs',
-			dest='interval_secs',
-			default=defaults.base.TimerIntervalSecs,
-			type=int,
-			help='Timer interval in seconds')
-
-		parser.add_argument(
-			'-bakto', '--bak-to-folder',
-			dest='bak_to_folder',
-			default=defaults.base.BakToFolder,
-			help='Folder where to stage a copy of notified files to')
-
-		parser.add_argument(
-			'-noconsole', '--noconsole',
-			dest='noconsole',
-			action='store_true',
-			default=False,
-			help='If specified, do not log to the console')
-
-		return parser
-
-	def setup_logging(self, cname, lfname, LogToConsole=True):
-		return setup_logging(cname, lfname, LogToConsole)
-
+##
+# Functions globally used by both BaseTaskMaster and BaseSubtask
+##
 
 def timedelta_milliseconds(td):
 	return td.days * 86400000 + td.seconds * 1000 + td.microseconds / 1000

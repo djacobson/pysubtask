@@ -17,6 +17,8 @@ base.ArchiveToFolder = 'archive'  # Relative path, None = does not archive expir
 base.ArchiveAfterDaysOld = 3
 base.Master_Log_FileName = './logs/base_taskmaster.log.txt'
 base.Subtask_Log_FileName = './logs/base_subtask.log.txt'
+base.HeartbeatIntervalSecs = 0  # Heartbeat file expected every N secs, 0 = Do not use Heartbeat
+base.HeartbeatName = None  # Name for .heartbeat file, default None = hostname
 
 burst_mode = Section('Base TaskMaster Burst Mode defaults')
 
@@ -30,7 +32,7 @@ ftp.SubtaskDescription = "S/FTP Uploader"
 ftp.HostPort = -1  # Default -1 = Use standard ports for either S/FTP
 ftp.HostPath = ""
 ftp.DeadTimeMilli = 180000  # 180000 millisecs = 3 mins, Time of no notifies before RESTing
-ftp.UseSFTP = True  # False = Use regular FTP
+ftp.UseSFTP = True  # False = Use regular FTP, Must be True to use SFTP
 ftp.BakToFolder = 'upload/ftp'  # Relative path, None = does not make a copy of file
 ftp.TimerIntervalSecs = 2  # Time to wake up and check for data notifies
 ftp.Master_Log_FileName = './logs/ftp_taskmaster.log.txt'

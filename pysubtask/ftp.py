@@ -13,6 +13,10 @@ from .base import BaseTaskMaster, BaseSubtask
 _SecretKey = '0987654321123456'
 
 
+##############
+# FTP Master #
+##############
+
 class FTPTaskMaster(BaseTaskMaster):
 
 	ftplogger = None
@@ -25,11 +29,11 @@ class FTPTaskMaster(BaseTaskMaster):
 		LogToConsole=True):
 
 		# Fill in non-specified config items with defaults
-		self.config = self.combine(pconfig, defaults.ftp)
+		self.ftp_config = self.combine(pconfig.ftp, defaults.ftp)
 
 		super().__init__(
 			WatchFiles,
-			self.config,
+			pconfig.base,
 			__name__,
 			LogFileName,
 			LogToConsole)
@@ -44,32 +48,32 @@ class FTPTaskMaster(BaseTaskMaster):
 
 	def init_ftp_args(self):
 		# Add specific args for FTP Client to SubProc args
-		if self.config.UseSFTP:
-			hostPath = self.config.HostSFTPPath
+		if self.ftp_config.UseSFTP:
+			hostPath = self.ftp_config.HostSFTPPath
 		else:
-			hostPath = self.config.HostFTPPath
-		passwordEncrypted = self.encode(_SecretKey, self.config.Password)
+			hostPath = self.ftp_config.HostFTPPath
+		passwordEncrypted = self.encode(_SecretKey, self.ftp_config.Password)
 		self._subtaskArgs += [
-			'-u', self.config.User,
+			'-u', self.ftp_config.User,
 			'-p', passwordEncrypted,
-			'-host', self.config.Host,
+			'-host', self.ftp_config.Host,
 			'-path', hostPath,
 			'-bakto', defaults.ftp.BakToFolder
 		]
-		if self.config.UseSFTP:
+		if self.ftp_config.UseSFTP:
 			self._subtaskArgs += ['-sftp']
 		# Only add these args if they differ from default config
-		if self.config.HostPort != defaults.ftp.HostPort:
-			self._subtaskArgs += ['-port', str(self.config.HostPort)]
-		if self.config.DeadTimeMilli != defaults.ftp.DeadTimeMilli:
-			self._subtaskArgs += ['-x', str(self.config.DeadTimeMilli)]
+		if self.ftp_config.HostPort != defaults.ftp.HostPort:
+			self._subtaskArgs += ['-port', str(self.ftp_config.HostPort)]
+		if self.ftp_config.DeadTimeMilli != defaults.ftp.DeadTimeMilli:
+			self._subtaskArgs += ['-x', str(self.ftp_config.DeadTimeMilli)]
 
 	def start(self, precleanup_old_files=False):
 		if precleanup_old_files:
 			# Pre-archive old data & pre-copy and upload previous residual data, then Start
 			super().start(
 				prearchive_expired_files_to_folder=defaults.base.ArchiveToFolder,
-				precopy_files_to_folder=self.config.BakToFolder)
+				precopy_files_to_folder=self.ftp_config.BakToFolder)
 		else:
 			# Just Start
 			super().start()
@@ -77,6 +81,10 @@ class FTPTaskMaster(BaseTaskMaster):
 	def stop(self):
 		super().stop(defaults.ftp.SubtaskDescription)
 
+
+###############
+# FTP Subtask #
+###############
 
 class FTPSubtask(BaseSubtask):
 
@@ -156,6 +164,16 @@ class FTPSubtask(BaseSubtask):
 					if self._SubtaskStopNow:
 						return
 					self.upload_file(psWatchFile)
+
+	def process_heartbeat(self, hb_filename):
+		if not self.Enabled:
+			return
+
+		# Subtask Heartbeat due!
+		if not self.is_connected():
+			self.connect()
+
+		self.upload_file(hb_filename, False)  # heartbeat does not need retry or logging
 
 	def connect(self, uploadAllFilesFirst=False):
 		# Cycle infinitely until connected
@@ -360,7 +378,7 @@ class FTPSubtask(BaseSubtask):
 			self.upload_all_in_dir(self._bakToFullPath)
 		self.disconnect()
 
-	def upload_file(self, upFile):
+	def upload_file(self, upFile, logSuccess=True):
 		# Check if upFile exists first
 		if not os.path.exists(upFile):
 			self.ftplogger.error("Upload file [{}] does not exist!".format(upFile))
@@ -373,6 +391,7 @@ class FTPSubtask(BaseSubtask):
 				return False
 
 		upname = os.path.basename(upFile)
+		logmsg = "FTP Upload Data File: [{}]".format(os.path.join(self._HostPath, upname))
 
 		if self._useSFTP and self._sftp:
 			try:
@@ -383,8 +402,8 @@ class FTPSubtask(BaseSubtask):
 				self.disconnect()
 				return False
 			else:
-				self.ftplogger.info("SFTP Upload Data File: [{}]".format(
-					os.path.join(self._HostPath, upname)))
+				logmsg = 'S' + logmsg
+				self.log_upload_success(logmsg, logSuccess)
 				return True
 		elif self._ftp:
 			try:
@@ -395,9 +414,12 @@ class FTPSubtask(BaseSubtask):
 				self.disconnect()
 				return False
 			else:
-				self.ftplogger.info("FTP Upload Data File: [{}]".format(
-					os.path.join(self._HostPath, upname)))
+				self.log_upload_success(logmsg, logSuccess)
 				return True
+
+	def log_upload_success(self, logmsg, logSuccess=True):
+		if logSuccess:
+			self.ftplogger.info(logmsg)
 
 	def upload_all_in_dir(self, upDir, clearFiles=False):
 		if not upDir or not os.path.exists(upDir):
