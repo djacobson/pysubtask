@@ -6,7 +6,7 @@
 
 from pysubtask._config import Struct as Section
 
-# Base config changes from defualts
+# Base config changes from defaults
 base = Section("pysubtask TaskMaster-Subtask Base demo configuration")
 # Use Heartbeat feature
 base.HeartbeatIntervalSecs = 60  # default = 0, not used
@@ -19,7 +19,7 @@ ftp.UseFTP = True  # Must be True to use SFTP
 # David's Dev S/FTP Server
 ftp.UseSFTP = True  # True = sftp protcol, False = unsecure ftp protcol
 ftp.User = "DAVIDJ-PC\David"
-ftp.Password = "*****************"
+ftp.Password = "***************"
 ftp.Host = "DavidJ-PC"
 ftp.HostFTPPath = 'tagreader'
 ftp.HostSFTPPath = 'Desktop/winftp/tagreader'
