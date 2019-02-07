@@ -642,6 +642,7 @@ class BaseSubtask():
 		hb_filename = '{}.heartbeat'.format(self.hb_basename)
 		self.hb_file = os.path.join(hb_path, hb_filename)
 
+		self._InitialHeartbeatSent = False
 		if self._HeartbeatIntervalSecs > 0:
 			self.baselogger.info("Heartbeat: File [{}] every [{}] secs.".format(self.hb_file, self._HeartbeatIntervalSecs))
 			with open(self.hb_file, 'w') as out_hbf:
@@ -767,8 +768,9 @@ class BaseSubtask():
 	def _process_heartbeat(self):
 		if self._SubtaskStopNow:
 			return
-		if self.heartbeat_time() > self._HeartbeatIntervalSecs * 1000:
+		if not self._InitialHeartbeatSent or self.heartbeat_time() > self._HeartbeatIntervalSecs * 1000:
 			# Heartbeat due!
+			self._InitialHeartbeatSent = True
 			self._last_heartbeat_dt = datetime.now()  # reset hb time
 			touch(self.hb_file)
 			self.process_heartbeat(self.hb_file)
