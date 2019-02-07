@@ -650,6 +650,7 @@ class BaseSubtask():
 
 	def start(self):
 		self.baselogger.info("START! Polling every [{}] secs".format(self._TimerIntervalSecs))
+		self._InitialHeartbeatSent = False
 
 		self._Timer = InfiniteTimer(
 			self._TimerIntervalSecs,
