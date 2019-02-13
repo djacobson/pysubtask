@@ -1,6 +1,6 @@
 # pysubtask
 
-**`pysubtask`** is a subtask and data transfer helper class; Version 1 is **push** only. It is a packaged module, for integration in any Python app, which implements a task-subtask (parent-child, master-slave, manager-worker, etc.) pattern with convenient extensions specifically for long-running, unreliable tasks like repeated Internet transfers (i.e.: constant updating of data files on a web server). Extensions include FTP, SFTP, and Dropbox. Resiliency is one of the primary design goals.
+**`pysubtask`** is a subtask and data transfer helper class; **push** only, client-side only (no custom server-side app needed). It is a packaged module, for integration in any Python app, which implements a task-subtask (parent-child, master-slave, manager-worker, etc.) pattern with convenient extensions specifically for long-running, unreliable tasks like repeated Internet transfers (i.e.: constant updating of data files on a web server). Extensions include FTP, SFTP, and Dropbox. Resiliency is one of the primary design goals.
 
 ## Quick Start
 
@@ -51,7 +51,7 @@ Also, observe the log output in the ``logs`` folder, as well as the test data fi
 
 ### Base Master and Subtask classes
 
-The main idea / goal behind this module was to implement cross-platform, Unix-like ``fork()``, subprocessing class in Python, that purposely does not use Python's threading or process modules. Instead, the 'spawned' subtask (child process) is very isolated from the master (parent process), in its own process / memory space, and has little opportunity to negatively impact the resources or performance of the subtask's master. However, the spawning master task class still has the ability to manage (start, stop, notify) the subtask.
+The main idea / goal behind this module was to implement cross-platform, Unix-like ``fork()``, subprocessing class in Python, that purposely does not use Python's threading or process modules. Instead, the 'spawned' subtask (child process) is very isolated from the master (parent process), in its own process / memory space, and has little opportunity to negatively impact the resources or performance of the subtask's master. However, the spawning master task class still has the ability to manage (start, stop, notify) the subtask. And then to build some resilient **push** data transfer extensions on top of this functionality.
 
 This specific use-case pattern is based on a data file(s) being updated (data constantly appended to it) on the master side, and the master efficiently "notifying" the spawned subtask that new data is ready (the subtask is preconfigured with the data file name(s) on initialization). Having been "notified", the subtask (child process) is free to do whatever long-running, performance intensive, potentially unreliable work (i.e.: slow S/FTP or Dropbox transfers over questionable Internet connections) in its own, isolated process space; allowing the master (parent process) to perform its own, possibly near-real-time, processing uninterrupted and isolated.
 
@@ -67,9 +67,9 @@ The ``pysubtask`` master task class automatically moves _**all**_ files in the d
 
 In cases where ``pysubtask`` experiences unplanned shutdowns, Internet outages, etc.; where data might exist in the ``watchfiles`` file list from previous runs that might not have been **notified**, **uploaded**, etc. (_**residual**_ data)... _**on initial start**_, the master will automatically _**pre-copy**_ all existing files (that have not aged enough to be archived off) of the same file type (the same file extension, i.e.: `.csv`, or `.dat`, etc.) as the first file listed in ``watchfiles``; to the snapshots folder: ``pysubtask/defaults_config.py: base.BakToFolder or ftp.BakToFolder or dropbox.BakToFolder``. The subtask will first consider these files as **notified** (i.e.: **upload** them), then clear / remove their snapshot copies before proceeding with the normal operation of watching the files in the ``watchfiles`` list.
 
-### Extensions: S/FTP and Dropbox classes
+### Extensions: S/FTP and Dropbox data transfer classes
 
-Part of the inspiration behind this package's design involved constant uploading of data to an Internet server from a location with unreliable, "spotty" internet service (i.e.: a cellular hot-spot, etc.), over a long period of time (hours); the communication failures, retry procedures, error handling robustness of different file transfer libraries, etc.; having ill-effect on the master working process.
+Part of the inspiration behind this package's design involved constant uploading of data from a client computer to an Internet server (without a custom server-side app) from a location with unreliable, "spotty" internet service (i.e.: a cellular hot-spot, etc.), over a long period of time (hours); the communication failures, retry procedures, error handling robustness of different file transfer libraries, etc.; having ill-effect on the master working process.
 
 #### Retry logic:
 
@@ -86,7 +86,7 @@ The **Heartbeat** option is intended to report the "health" of subtasks during e
 - ``pysubtask`` extensions (i.e.: ``ftp``, ``dropbox``, etc.) are setup to auto-transfer Heartbeat files (``.heartbeat``) so remote server app(s) can monitor the Heartbeat files (Note: ...the original motivation behind this feature).
 - ``.heartbeat`` files are stored in the first ``watchfilesdirs`` list entry folder specified during ``TaskMaster`` creation, and also auto-cleaned-up on ``pysubtask`` start and stop.
 - ``.heartbeat`` files are prefixed by a name specified using ``base.HeartbeatName`` or, if left unset, the ``pysubtask`` computer ``hostname``.
-- The Heartbeat schedule is checked in intervals of ``base.TimerIntervalSecs`` and its ``base.HeartbeatIntervalSecs`` should be set to a greater value. It also makes sense for ``base.HeartbeatIntervalSecs`` to be a value greater than the extension's ``DeadTimeMilli`` setting (i.e.: ``ftp.DeadTimeMilli``); if not, no **dead time** will occur and you will not realize the benefits of efficient disconnects and reconnects during periods of extended **dead time** or inactivity.
+- The Heartbeat schedule is checked in intervals of ``base.TimerIntervalSecs`` and its ``base.HeartbeatIntervalSecs`` should be set to a greater value. It also makes sense for ``base.HeartbeatIntervalSecs`` to be a value greater than the extension's ``DeadTimeMilli`` setting (i.e.: ``ftp.DeadTimeMilli``); if not, no **dead time** will occur and you will not realize the benefits of efficient disconnects and reconnects during periods of extended **dead time** or inactivity. One initial heartbeat is generated instantly on app startup.
 
 ### Burst Mode: (EXPERIMENTAL: Optional per data file during master class initialization)
 
@@ -96,6 +96,7 @@ Note: This master side **burst mode** feature is not quite the same as a subtask
 
 ### To Do
 
+- The transfer extensions are currently "full file" transfer technologies (i.e.: FTP, Dropbox). It would be nice to implement a file differential transfer algorithm similar to Unix's ``rsync`` to reduce the amount of data sent with ongoing notifications. But, ``rsync`` has its own custom server-side daemon to support its diff'ing process. For the ``pysubtask`` "client-side-only" design, it would be preferable to implement this entirely client-side, possibly using an external records position file set, etc. But, it may be difficult to achieve 100% reliability and recoverabliity for remote data synchronization in a client-side-only design.
 - Version 1 is primarily a **push** / ``put()`` assistant. It would make sense to add **pull** / ``get()`` to the same module, but, would the subtask try to notify the master? Or just simply get data on a timer interval and rely on the master to poll for it?
 - ``demo.py`` could probably be made into an official test module, moved into a tests folder, and made to work with pytest (including a setyp.py install section for tests)
 - Possible feature: Implement an _"exponential back-off"_ algorithm in the subtask-side (child) of the S/FTP and Dropbox extension classes. This would be slightly different from **burst mode** (task master / parent side), with the objective being to reduce the total number of transfers / transactions over a long period of time (i.e.: 12 or 24 hours), as opposed to just reducing some transfers during a **burst** of data notifications. This feature would have the secondary goal of avoiding surpassing host transaction limits / quotas (i.e.: Dropbox upload limits per day, etc.).
