@@ -69,14 +69,14 @@ In cases where ``pysubtask`` experiences unplanned shutdowns, Internet outages, 
 
 ### Extensions: S/FTP and Dropbox data transfer classes
 
-Part of the inspiration behind this package's design involved constant uploading of data from a client computer to an Internet server (without a custom server-side app) from a location with unreliable, "spotty" internet service (i.e.: a cellular hot-spot, etc.), over a long period of time (hours); the communication failures, retry procedures, error handling robustness of different file transfer libraries, etc.; having ill-effect on the master working process.
+Part of the inspiration behind this package's design involved constant uploading of data from a client computer to an Internet server (without a custom server-side app) from a location with unreliable, "spotty" internet service (i.e.: a cellular hot-spot, etc.), over a long period of time (hours); with the communication failures, retry procedures, error handling robustness of different file transfer libraries, etc.; having ill-effect on the master working process.
 
 #### Retry logic:
 
 The FTP and Dropbox extension modules implement the following retry procedure to handle authentication and/or connection failures:
 - Retry an initial number of tries (default 5), waiting a short time between each failure (default 3 seconds)
 - After the initial number of failures, wait a longer period of time (default 30 seconds) before starting another set of retries
-After successful connection, the module will keep the connection 'open' as long as it is receiving new data notifications from the master. But, if a specified amount of time passes where there is no notifications, **"dead time"**, the module will logout / disconnect (Note: it can be unreliable and resource intensive to keep FTP, Dropbox, etc. login connections open over long periods of time, i.e.: hours). The module will automatically re-authenticate + reconnect if a new data notification is observed. ("dead time" default is set to 3 minutes = 180000 millisecs, configured on class instantiation or in ``pysubtask/defaults_config.py: ftp.DeadTimeMilli and/or dropbox.DeadTimeMilli``)
+- After successful connection, the module will keep the connection 'open' as long as it is receiving new data notifications from the master. But, if a specified amount of time passes where there are no notifications, **"dead time"**, the module will logout / disconnect (Note: it can be unreliable and resource intensive to keep FTP, Dropbox, etc. login connections open over long periods of time, i.e.: hours). The module will automatically re-authenticate + reconnect if a new data notification is observed. ("dead time" default is set to 3 minutes = 180000 millisecs, configured on class instantiation or in ``pysubtask/defaults_config.py: ftp.DeadTimeMilli and/or dropbox.DeadTimeMilli``)
 
 ### Heartbeat Health Status
 
