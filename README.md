@@ -122,4 +122,4 @@ The following dev topics may or may not result in future changes...
 
 ### Authors, Contributors, etc.
 
-Version 1 of `pysubtask` was designed and written by [David Jacobson](http://blog.jacobsonhome.com/) ([git](https://github.com/djacobson)), with many thanks to [Darryl Agostinelli](http://www.darrylagostinelli.com/) ([git](https://github.com/dagostinelli)) for extensive refactoring and general pythonic assistance.
+Version 1 of `pysubtask` was designed and written by [David Jacobson](http://blog.jacobsonhome.com/) ([github](https://github.com/djacobson)), with many thanks to [Darryl Agostinelli](http://www.darrylagostinelli.com/) ([github](https://github.com/dagostinelli)) for extensive refactoring and general pythonic assistance.
