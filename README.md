@@ -101,6 +101,7 @@ Note: This master side **burst mode** feature is not quite the same as a subtask
 - ``demo.py`` could probably be made into an official test module, moved into a tests folder, and made to work with pytest (including a setyp.py install section for tests)
 - Possible feature: Implement an _"exponential back-off"_ algorithm in the subtask-side (child) of the S/FTP and Dropbox extension classes. This would be slightly different from **burst mode** (task master / parent side), with the objective being to reduce the total number of transfers / transactions over a long period of time (i.e.: 12 or 24 hours), as opposed to just reducing some transfers during a **burst** of data notifications. This feature would have the secondary goal of avoiding surpassing host transaction limits / quotas (i.e.: Dropbox upload limits per day, etc.).
 - Possible enhancement: The _"burst detection"_ algorithm could be made more robust if it considered number of bytes being written to the data file(s), possibly replacing or as an alternative to frequency of notifications. Missing this is the main reason this feature remains "Experimental".
+- Possibly publish separate 2nd app that demonstrates server-side monitoring of the "Heartbeat" online / offline status feature. This app might be a portable GUI app (i.e.: PyQT, PySide, etc.)
 
 ### Dependencies
 
