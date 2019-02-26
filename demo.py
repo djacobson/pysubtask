@@ -83,7 +83,7 @@ def run_app():
 	master.start(precleanup_old_files=True)
 
 	get_commands(master)
-	master.stop()
+	master.stop(forcekill=False)
 
 	return
 

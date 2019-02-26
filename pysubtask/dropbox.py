@@ -73,8 +73,8 @@ class DropboxTaskMaster(BaseTaskMaster):
 			# Just Start
 			super().start()
 
-	def stop(self):
-		super().stop(defaults.dropbox.SubtaskDescription)
+	def stop(self, **kwargs):
+		super().stop(defaults.dropbox.SubtaskDescription, **kwargs)
 
 
 ###################

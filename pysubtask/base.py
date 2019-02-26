@@ -171,16 +171,22 @@ class BaseTaskMaster():
 			os.getpid(),
 			self._subtask.pid))
 
-	def stop(self, subtaskDescription=defaults.base.SubtaskDescription):
+	def stop(self, subtaskDescription=defaults.base.SubtaskDescription, forcekill=True):
 		if self._subtask:
 			self.baselogger.info("STOP!: BaseTaskMaster attempting to stop BaseSubtask [{}]...".format(
 				self._subtask.pid))
 			if ON_WINDOWS:
-				# self._subtask.send_signal(signal.CTRL_BREAK_EVENT)
-				os.popen('TASKKILL /PID ' + str(self._subtask.pid) + ' /F')
+				if forcekill:
+					# os.popen('TASKKILL /PID ' + str(self._subtask.pid) + ' /F')
+					self._subtask.kill()
+				else:
+					self._subtask.send_signal(signal.CTRL_BREAK_EVENT)
 			else:
-				self._subtask.terminate()
-			self._subtask.wait()
+				if forcekill:
+					self._subtask.kill()
+				else:
+					self._subtask.terminate()
+					self._subtask.wait()
 		self.cleanup_all_notify_files()
 		self.baselogger.info("***** GOODBYE!: [{}] *****".format(subtaskDescription))
 

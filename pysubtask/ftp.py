@@ -78,8 +78,8 @@ class FTPTaskMaster(BaseTaskMaster):
 			# Just Start
 			super().start()
 
-	def stop(self):
-		super().stop(defaults.ftp.SubtaskDescription)
+	def stop(self, **kwargs):
+		super().stop(defaults.ftp.SubtaskDescription, **kwargs)
 
 
 ###############
