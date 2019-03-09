@@ -891,7 +891,8 @@ def setup_logging(cname, lfname, LogToConsole=True):
 	# create formatter
 	pid = os.getpid()
 	logFormat = '%(asctime)s.%(msecs)03d [%(module)s.%(name)s.{}]: %(levelname)s: %(message)s'.format(pid)
-	formatter = logging.Formatter(logFormat, datefmt="%Y-%m-%d %H:%M:%S")
+	# formatter = logging.Formatter(logFormat, datefmt="%Y-%m-%d %H:%M:%S")
+	formatter = logging.Formatter(logFormat, datefmt="%Y-%m-%d %p %I:%M:%S")
 
 	if LogToConsole:
 		# create console handler and set level to debug
