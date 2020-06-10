@@ -1,6 +1,6 @@
 # pysubtask
 
-**`pysubtask`** is a subtask and data transfer helper class; **push** only, client-side only (no custom server-side app needed). It is a packaged module, for integration in any Python app, which implements a task-subtask (parent-child, master-slave, manager-worker, etc.) pattern with convenient extensions specifically for long-running, unreliable tasks like repeated Internet transfers (i.e.: constant updating of data files on a web server). Extensions include S/FTP, and Dropbox. Resiliency is one of the primary design goals.
+**`pysubtask`** is a subtask and data transfer helper class; **push** only, client-side only (no custom server-side app needed). It is a packaged module, for integration in any Python app, which implements a task-subtask (parent-child, M / S, manager-worker, leader-follower, etc.) pattern with convenient extensions specifically for long-running, unreliable tasks like repeated Internet transfers (i.e.: constant updating of data files on a web server). Extensions include S/FTP, and Dropbox. Resiliency is one of the primary design goals.
 
 ## Quick Start
 
